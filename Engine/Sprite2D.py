@@ -1,0 +1,43 @@
+from __future__ import annotations
+from typing import Optional
+from Engine.Matrix3x3 import Matrix3x3
+from Engine.Node import Node
+import tkinter as tk
+class Sprite2D(Node):
+    """
+    Draws a solid-colour rectangle in world space.
+
+    Parameters
+    ----------
+    name        Node name
+    width       Local-space width  (centred on origin)
+    height      Local-space height (centred on origin)
+    color       Fill color string recognised by tkinter ("red", "#ff0000", …)
+    outline     Outline color (empty string = no outline)
+    label       Optional text rendered at the node origin in screen space
+    """
+
+    def __init__(self, name: str, width: float = 20, height: float = 20,
+                 color: str = "white", outline: str = "white",
+                 label: str = "", parent: Optional[Node] = None):
+        super().__init__(name, parent=parent)
+        self.width   = width
+        self.height  = height
+        self.color   = color
+        self.outline = outline
+        self.label   = label
+
+    def _draw(self, canvas: tk.Canvas, cam: Matrix3x3) -> None:
+        mat = cam * self.global_matrix
+        hw, hh = self.width / 2, self.height / 2
+        corners = [(-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)]
+        pts = []
+        for px, py in corners:
+            sx, sy = mat.multiply_vec(px, py)
+            pts.extend([sx, sy])
+        canvas.create_polygon(pts, fill=self.color,
+                              outline=self.outline, width=1)
+        if self.label:
+            ox, oy = mat.multiply_vec(0, 0)
+            canvas.create_text(ox, oy, text=self.label,
+                               fill="white", font=("Helvetica", 8))
