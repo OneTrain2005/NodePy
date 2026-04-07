@@ -22,6 +22,7 @@ from Engine.Matrix3x3 import Matrix3x3
 from Engine.Signal import Signal
 from Engine.Vector2d import Vector2d
 from Engine.Camera2D import Camera2D
+import random
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Player
@@ -167,19 +168,14 @@ def build_scene(loop: GameLoop) -> Node:
     bg = _GridBackground("BG", spacing=60,
                           width=loop.width, height=loop.height)
     world.add_child(bg)
-
+    #debug_overlay = DebugOverlay()
+    #world.add_child(debug_overlay)
     # Player
     player = Player()
     world.add_child(player)
 
-    # Coins scattered around the world
-    coin_positions = [
-        Vector2d( 200,  120), Vector2d(-150,  200),
-        Vector2d( 320, -100), Vector2d(-280, -180),
-        Vector2d(  80,  280), Vector2d(-100, -320),
-        Vector2d( 400,  200), Vector2d(-350,  100),
-    ]
-    for pos in coin_positions:
+    for _ in range(1000):
+        pos = Vector2d(random.uniform(-3000, 3000), random.uniform(-3000, 3000))
         world.add_child(Coin(pos))
 
     # ── Camera ───────────────────────────────────────────────────────────────
@@ -220,6 +216,25 @@ class _GridBackground(Node):
                 canvas.create_oval(sx - 1, sy - 1, sx + 1, sy + 1,
                                    fill="#2a2a4a", outline="")
 
+# ─────────────────────────────────────────────────────────────────────────────
+# QuadtreeDbugDraw -- child of world node
+# ─────────────────────────────────────────────────────────────────────────────
+class DebugOverlay(Node):
+    def __init__(self):
+        super().__init__("DebugOverlay")
+        self.enabled = True
+
+    def _update(self, delta):
+        # Toggle with a key press
+        if Input.is_action_just_pressed("F1"):
+            self.enabled = not self.enabled
+
+    def _draw(self, canvas, cam):
+        if not self.enabled:
+            return
+        qt = CollisionShape._quadtree
+        if qt is not None:
+            qt.debug_draw(canvas, cam)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Entry point

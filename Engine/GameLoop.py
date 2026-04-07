@@ -3,6 +3,8 @@ from Engine.Input import Input
 from Engine.Matrix3x3 import Matrix3x3
 from Engine.Node import Node
 from Engine.Camera2D import Camera2D
+from Engine.Quadtree import Quadtree
+from Engine.CollisionShape import CollisionShape
 from typing import Optional, List
 import time
 import tkinter as tk
@@ -66,6 +68,15 @@ class GameLoop:
 
         # ── Input: flush per-frame state before any _update sees it ──────────
         Input._flush()
+
+        # ── Rebuild quadtree from all active collision shapes ─────────────────
+        # Done once here so every CollisionShape._update() this frame shares
+        # the same spatial index — O(n log n) instead of O(n²).
+        qt = Quadtree(bounds=(-4000, -4000, 4000, 4000))
+        for shape in CollisionShape._all:
+            if shape.visible:
+                qt.insert(shape)
+        CollisionShape._quadtree = qt
 
         # ── Update scene tree ────────────────────────────────────────────────
         if self._scene:

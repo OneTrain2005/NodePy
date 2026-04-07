@@ -33,6 +33,8 @@ class CollisionShape(Node):
 
     # Class-level registry so shapes can find each other
     _all: List["CollisionShape"] = []
+    # Current quadtree — rebuilt by GameLoop at the start of each frame
+    _quadtree = None
 
     def __init__(self, name: str, width: float = 20, height: float = 20,
                  debug_draw: bool = False, parent: Optional[Node] = None):
@@ -77,11 +79,19 @@ class CollisionShape(Node):
         return x0 <= point.x <= x1 and y0 <= point.y <= y1
 
     def _update(self, delta: float) -> None:
-        # Emit body_entered / body_exited signals
+        # Query the quadtree for nearby candidates instead of scanning _all.
+        # GameLoop rebuilds CollisionShape._quadtree once per frame before
+        # _process runs, so the tree is always fresh when we get here.
+        qt = CollisionShape._quadtree
+        if qt is not None:
+            candidates = qt.query_shape(self)
+        else:
+            # Fallback: no quadtree built yet (first frame) — scan _all
+            candidates = [s for s in CollisionShape._all
+                          if s is not self and s.visible]
+
         current: set["CollisionShape"] = set()
-        for other in CollisionShape._all:
-            if other is self or not other.visible:
-                continue
+        for other in candidates:
             if self.overlaps(other):
                 current.add(other)
                 if other not in self._overlapping:
