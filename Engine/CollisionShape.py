@@ -3,6 +3,7 @@ from Engine.Node import Node
 from Engine.Matrix3x3 import Matrix3x3
 from Engine.Vector2d import Vector2d
 from Engine.Signal import Signal
+from Engine.Camera2D import Camera2D
 from typing import Optional, Tuple, List
 import tkinter as tk
 
@@ -47,6 +48,7 @@ class CollisionShape(Node):
         self.body_exited  = Signal("body_exited")
 
         self._overlapping: set["CollisionShape"] = set()
+        self._cached_aabb: Optional[Tuple[float, float, float, float]] = None
         CollisionShape._all.append(self)
 
     def _ready(self) -> None:
@@ -70,8 +72,8 @@ class CollisionShape(Node):
         return min(xs), min(ys), max(xs), max(ys)
 
     def overlaps(self, other: "CollisionShape") -> bool:
-        ax0, ay0, ax1, ay1 = self.get_aabb()
-        bx0, by0, bx1, by1 = other.get_aabb()
+        ax0, ay0, ax1, ay1 = self._cached_aabb or self.get_aabb()
+        bx0, by0, bx1, by1 = other._cached_aabb or other.get_aabb()
         return ax0 < bx1 and ax1 > bx0 and ay0 < by1 and ay1 > by0
 
     def contains_point(self, point: Vector2d) -> bool:
@@ -79,6 +81,11 @@ class CollisionShape(Node):
         return x0 <= point.x <= x1 and y0 <= point.y <= y1
 
     def _update(self, delta: float) -> None:
+        # Skip entirely if nothing is listening — avoids quadtree queries for
+        # the majority of passive shapes (e.g. coin colliders with no handlers).
+        if not self.body_entered._listeners and not self.body_exited._listeners:
+            return
+
         # Query the quadtree for nearby candidates instead of scanning _all.
         # GameLoop rebuilds CollisionShape._quadtree once per frame before
         # _process runs, so the tree is always fresh when we get here.
@@ -110,5 +117,16 @@ class CollisionShape(Node):
         for px, py in corners:
             sx, sy = mat.multiply_vec(px, py)
             pts.extend([sx, sy])
+
+        # Viewport cull
+        active = Camera2D._active
+        if active is not None:
+            vw, vh = active.viewport_w, active.viewport_h
+            if (pts[0] < 0 and pts[2] < 0 and pts[4] < 0 and pts[6] < 0) or \
+               (pts[0] > vw and pts[2] > vw and pts[4] > vw and pts[6] > vw) or \
+               (pts[1] < 0 and pts[3] < 0 and pts[5] < 0 and pts[7] < 0) or \
+               (pts[1] > vh and pts[3] > vh and pts[5] > vh and pts[7] > vh):
+                return
+
         canvas.create_polygon(pts, fill="", outline="#00ff88",
                               width=1, dash=(4, 3))
