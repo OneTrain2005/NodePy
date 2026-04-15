@@ -13,36 +13,49 @@ HUD     Screen-space label showing score and controls.
         ignores the camera transform.
 """
 
-from Engine.Node import Node
-from Engine.Sprite2D import Sprite2D
+import math
+import random
+
+from PIL import Image
+
+from Engine.Camera2D import Camera2D
 from Engine.CollisionShape import CollisionShape
+from Engine.ColorRect2D import ColorRect2D
 from Engine.GameLoop import GameLoop
 from Engine.Input import Input
 from Engine.Matrix3x3 import Matrix3x3
+from Engine.Node import Node
 from Engine.Signal import Signal
+from Engine.Sprite2D import Sprite2D
+from Engine.Texture2D import ImageTexture
 from Engine.Vector2d import Vector2d
-from Engine.Camera2D import Camera2D
-import random
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Player
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class Player(Node):
-    SPEED = 180.0   # px / second
+    SPEED = 180.0  # px / second
 
     def __init__(self):
         super().__init__("Player")
         self.score = 0
 
         # Visual
-        self.sprite = Sprite2D("sprite", width=28, height=28,
-                               color="#f6c90e", outline="#ffd700",
-                               parent=self)
+        self.sprite = ColorRect2D(
+            "sprite",
+            width=28,
+            height=28,
+            color="#f6c90e",
+            outline="#ffd700",
+            parent=self,
+        )
 
         # Collision
-        self.col = CollisionShape("col", width=28, height=28,
-                                  debug_draw=True, parent=self)
+        self.col = CollisionShape(
+            "col", width=28, height=28, debug_draw=True, parent=self
+        )
         self.col.body_entered.connect(self._on_body_entered)
 
         # Custom signal: score changed
@@ -52,13 +65,12 @@ class Player(Node):
         self.relative_pos = Vector2d(0, 0)
 
     def _update(self, delta: float) -> None:
-        direction = Input.get_vector("move_left", "move_right",
-                                     "move_up",    "move_down")
+        direction = Input.get_vector("move_left", "move_right", "move_up", "move_down")
         if direction.length() > 0:
             direction = direction.normalized()
         self.relative_pos = self.relative_pos + direction * (self.SPEED * delta)
 
-        # Rotate sprite slightly based on horizontal movement for juice
+        # Tilt the rect slightly based on horizontal movement for juice
         self.sprite.rotation = self.sprite.rotation + direction.x * 90 * delta
 
     def _on_body_entered(self, other: CollisionShape) -> None:
@@ -75,19 +87,44 @@ class Player(Node):
 # Coin
 # ─────────────────────────────────────────────────────────────────────────────
 
+_coin_texture: "ImageTexture | None" = None
+
+
+_COIN_DISPLAY_SIZE = (24, 24)
+
+
+def _get_coin_texture() -> ImageTexture:
+    global _coin_texture
+    if _coin_texture is None:
+        # Load pre-scaled to the display size so the 256×256 source is
+        # discarded immediately — only a 24×24 RGBA image lives in memory.
+        _coin_texture = ImageTexture.load(
+            "demos/coin.png",
+            native_size=_COIN_DISPLAY_SIZE,
+            filter_mode=Image.BOX,
+        )
+    return _coin_texture
+
+
 class Coin(Node):
     def __init__(self, pos: Vector2d):
         super().__init__("Coin")
         self.relative_pos = pos
         self._spin = 0.0
 
-        self.sprite = Sprite2D("sprite", width=16, height=16,
-                               color="#ff8c00", outline="#ffa500",
-                               parent=self)
-        self.sprite.rotation = 45   # diamond shape
+        self.sprite = Sprite2D(
+            "sprite",
+            texture=_get_coin_texture(),
+            width=24,
+            height=24,
+            filter_mode=Image.NEAREST,
+            parent=self,
+        )
+        self.sprite.rotation = 45  # start as a diamond
 
-        self.col = CollisionShape("col", width=16, height=16,
-                                  debug_draw=False, parent=self)
+        self.col = CollisionShape(
+            "col", width=24, height=24, debug_draw=False, parent=self
+        )
 
     def _update(self, delta: float) -> None:
         self._spin += 120 * delta
@@ -100,6 +137,7 @@ class Coin(Node):
 # ─────────────────────────────────────────────────────────────────────────────
 # HUD  (lives in screen space — NOT a child of any world node)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class HUD(Node):
     """
@@ -116,16 +154,23 @@ class HUD(Node):
 
     def _draw(self, canvas, cam) -> None:
         import tkinter as tk
+
         # Ignore camera — draw directly in screen coords
         canvas.create_text(
-            14, 14, anchor="nw",
+            14,
+            14,
+            anchor="nw",
             text=f"Coins: {self._score}",
-            fill="white", font=("Helvetica", 14, "bold"),
+            fill="white",
+            font=("Helvetica", 14, "bold"),
         )
         canvas.create_text(
-            14, 36, anchor="nw",
+            14,
+            36,
+            anchor="nw",
             text="WASD / arrows to move",
-            fill="#aaaaaa", font=("Helvetica", 10),
+            fill="#aaaaaa",
+            font=("Helvetica", 10),
         )
 
 
@@ -133,8 +178,9 @@ class HUD(Node):
 # SmoothCamera  (follows a target with lerp)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class SmoothCamera(Camera2D):
-    LERP_SPEED = 5.0   # higher = snappier follow
+    LERP_SPEED = 5.0  # higher = snappier follow
 
     def __init__(self, target: Node, viewport_size):
         super().__init__("Camera2D", viewport_size=viewport_size, zoom=1.0)
@@ -153,6 +199,7 @@ class SmoothCamera(Camera2D):
 # Scene assembly
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def build_scene(loop: GameLoop) -> Node:
     VP = (loop.width, loop.height)
 
@@ -165,11 +212,10 @@ def build_scene(loop: GameLoop) -> Node:
     root.add_child(world)
 
     # Background grid (visual reference only — a grid of small dots)
-    bg = _GridBackground("BG", spacing=60,
-                          width=loop.width, height=loop.height)
+    bg = _GridBackground("BG", spacing=60, width=loop.width, height=loop.height)
     world.add_child(bg)
-    #debug_overlay = DebugOverlay()
-    #world.add_child(debug_overlay)
+    # debug_overlay = DebugOverlay()
+    # world.add_child(debug_overlay)
     # Player
     player = Player()
     world.add_child(player)
@@ -177,6 +223,14 @@ def build_scene(loop: GameLoop) -> Node:
     for _ in range(1000):
         pos = Vector2d(random.uniform(-3000, 3000), random.uniform(-3000, 3000))
         world.add_child(Coin(pos))
+
+    # Pre-bake all 72 coin rotation frames at scene load so no PIL work
+    # happens during gameplay.  zoom=1 → display size matches Coin.sprite dims.
+    from Engine.TextureManager import TextureManager
+
+    TextureManager.instance().prewarm(
+        _get_coin_texture(), w_px=24, h_px=24, filter_mode=Image.NEAREST
+    )
 
     # ── Camera ───────────────────────────────────────────────────────────────
 
@@ -199,22 +253,25 @@ def build_scene(loop: GameLoop) -> Node:
 # GridBackground helper
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class _GridBackground(Node):
     """Draws a subtle dot grid in world space for spatial reference."""
 
     def __init__(self, name: str, spacing: int, width: int, height: int):
         super().__init__(name)
         self.spacing = spacing
-        self.half_w  = width  // 2 + spacing * 2
-        self.half_h  = height // 2 + spacing * 2
+        self.half_w = width // 2 + spacing * 2
+        self.half_h = height // 2 + spacing * 2
 
     def _draw(self, canvas, cam: "Matrix3x3") -> None:
         s = self.spacing
         for wx in range(-self.half_w, self.half_w + 1, s):
             for wy in range(-self.half_h, self.half_h + 1, s):
                 sx, sy = cam.multiply_vec(wx, wy)
-                canvas.create_oval(sx - 1, sy - 1, sx + 1, sy + 1,
-                                   fill="#2a2a4a", outline="")
+                canvas.create_oval(
+                    sx - 1, sy - 1, sx + 1, sy + 1, fill="#2a2a4a", outline=""
+                )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # QuadtreeDbugDraw -- child of world node
@@ -236,14 +293,15 @@ class DebugOverlay(Node):
         if qt is not None:
             qt.debug_draw(canvas, cam)
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    loop = GameLoop(width=800, height=600,
-                    title="PyEngine demo — collect the coins",
-                    bg="#0f0f1e")
+    loop = GameLoop(
+        width=800, height=600, title="PyEngine demo — collect the coins", bg="#0f0f1e"
+    )
     scene = build_scene(loop)
     loop.set_scene(scene)
     loop.run()
