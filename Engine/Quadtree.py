@@ -101,7 +101,7 @@ class _QTNode:
             # Re-distribute existing shapes into children where possible
             remaining = []
             for s in self.shapes:
-                s_aabb = s.get_aabb()
+                s_aabb = s._cached_aabb
                 target = self._quadrant_for(s_aabb)
                 if target is not None:
                     target.insert(s, s_aabb)
@@ -119,7 +119,7 @@ class _QTNode:
         # Shapes stored at this node always need to be checked (straddlers
         # and leaf contents both live here)
         for shape in self.shapes:
-            if _aabb_intersects(shape.get_aabb(), aabb):
+            if _aabb_intersects(shape._cached_aabb, aabb):
                 result.append(shape)
 
         # Recurse into children that overlap the query region
@@ -152,8 +152,7 @@ class Quadtree:
         if not shape.visible:
             return
         aabb = shape.get_aabb()
-        # If the shape is outside the tree bounds, clamp it to the root
-        # (it will become a straddler and still be checked correctly)
+        shape._cached_aabb = aabb   # reused by query/overlaps this frame
         self._root.insert(shape, aabb)
 
     def query(self, aabb: AABB) -> List["CollisionShape"]:
@@ -164,7 +163,7 @@ class Quadtree:
 
     def query_shape(self, shape: "CollisionShape") -> List["CollisionShape"]:
         """Convenience: query by a shape's own AABB, excluding itself."""
-        candidates = self.query(shape.get_aabb())
+        candidates = self.query(shape._cached_aabb or shape.get_aabb())
         return [c for c in candidates if c is not shape]
 
     def debug_draw(self, canvas, cam) -> None:

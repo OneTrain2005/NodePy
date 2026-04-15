@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Optional
 from Engine.Matrix3x3 import Matrix3x3
 from Engine.Node import Node
+from Engine.Camera2D import Camera2D
 import tkinter as tk
 class Sprite2D(Node):
     """
@@ -35,6 +36,17 @@ class Sprite2D(Node):
         for px, py in corners:
             sx, sy = mat.multiply_vec(px, py)
             pts.extend([sx, sy])
+
+        # Viewport cull — skip canvas calls if entirely off-screen
+        active = Camera2D._active
+        if active is not None:
+            vw, vh = active.viewport_w, active.viewport_h
+            if (pts[0] < 0 and pts[2] < 0 and pts[4] < 0 and pts[6] < 0) or \
+               (pts[0] > vw and pts[2] > vw and pts[4] > vw and pts[6] > vw) or \
+               (pts[1] < 0 and pts[3] < 0 and pts[5] < 0 and pts[7] < 0) or \
+               (pts[1] > vh and pts[3] > vh and pts[5] > vh and pts[7] > vh):
+                return
+
         canvas.create_polygon(pts, fill=self.color,
                               outline=self.outline, width=1)
         if self.label:
