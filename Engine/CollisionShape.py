@@ -81,6 +81,11 @@ class CollisionShape(Node):
         return x0 <= point.x <= x1 and y0 <= point.y <= y1
 
     def _update(self, delta: float) -> None:
+        # Skip entirely if nothing is listening — avoids quadtree queries for
+        # the majority of passive shapes (e.g. coin colliders with no handlers).
+        if not self.body_entered._listeners and not self.body_exited._listeners:
+            return
+
         # Query the quadtree for nearby candidates instead of scanning _all.
         # GameLoop rebuilds CollisionShape._quadtree once per frame before
         # _process runs, so the tree is always fresh when we get here.

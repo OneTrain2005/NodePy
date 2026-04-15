@@ -29,6 +29,23 @@ class Sprite2D(Node):
         self.label   = label
 
     def _draw(self, canvas: tk.Canvas, cam: Matrix3x3) -> None:
+        active = Camera2D._active
+        if active is not None:
+            vw, vh = active.viewport_w, active.viewport_h
+            # Pre-cull: project the sprite's world-space centre using the
+            # parent's already-cached global matrix.  This avoids recomputing
+            # the (dirty) local matrix for the ~99% of sprites that are
+            # off-screen.  A generous margin accounts for rotation and scale.
+            ref = self.parent if self.parent is not None else self
+            wx, wy = ref.global_matrix.multiply_vec(
+                self._relative_pos.x, self._relative_pos.y
+            )
+            sx, sy = cam.multiply_vec(wx, wy)
+            margin = (self.width + self.height) * active.zoom
+            if sx + margin < 0 or sx - margin > vw or \
+               sy + margin < 0 or sy - margin > vh:
+                return
+
         mat = cam * self.global_matrix
         hw, hh = self.width / 2, self.height / 2
         corners = [(-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)]
@@ -37,10 +54,8 @@ class Sprite2D(Node):
             sx, sy = mat.multiply_vec(px, py)
             pts.extend([sx, sy])
 
-        # Viewport cull — skip canvas calls if entirely off-screen
-        active = Camera2D._active
+        # Exact cull — catches anything the margin pre-cull passed through
         if active is not None:
-            vw, vh = active.viewport_w, active.viewport_h
             if (pts[0] < 0 and pts[2] < 0 and pts[4] < 0 and pts[6] < 0) or \
                (pts[0] > vw and pts[2] > vw and pts[4] > vw and pts[6] > vw) or \
                (pts[1] < 0 and pts[3] < 0 and pts[5] < 0 and pts[7] < 0) or \
