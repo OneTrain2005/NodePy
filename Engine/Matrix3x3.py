@@ -21,11 +21,18 @@ class Matrix3x3:
         )
 
     def __mul__(self, other: "Matrix3x3") -> "Matrix3x3":
-        res = [[0.0] * 3 for _ in range(3)]
-        for i in range(3):
-            for j in range(3):
-                res[i][j] = sum(self.m[i][k] * other.m[k][j] for k in range(3))
-        return Matrix3x3(res)
+        a, b = self.m, other.m
+        return Matrix3x3([
+            [a[0][0]*b[0][0] + a[0][1]*b[1][0] + a[0][2]*b[2][0],
+             a[0][0]*b[0][1] + a[0][1]*b[1][1] + a[0][2]*b[2][1],
+             a[0][0]*b[0][2] + a[0][1]*b[1][2] + a[0][2]*b[2][2]],
+            [a[1][0]*b[0][0] + a[1][1]*b[1][0] + a[1][2]*b[2][0],
+             a[1][0]*b[0][1] + a[1][1]*b[1][1] + a[1][2]*b[2][1],
+             a[1][0]*b[0][2] + a[1][1]*b[1][2] + a[1][2]*b[2][2]],
+            [a[2][0]*b[0][0] + a[2][1]*b[1][0] + a[2][2]*b[2][0],
+             a[2][0]*b[0][1] + a[2][1]*b[1][1] + a[2][2]*b[2][1],
+             a[2][0]*b[0][2] + a[2][1]*b[1][2] + a[2][2]*b[2][2]],
+        ])
 
     # ── Factory methods ──────────────────────────────────────────────────────
 
@@ -45,12 +52,14 @@ class Matrix3x3:
 
     @staticmethod
     def make_transform(pos: Vector2d, angle_deg: float, scale: Vector2d) -> "Matrix3x3":
-        """Standard TRS: translate * rotate * scale."""
-        return (
-            Matrix3x3.translation(pos)
-            * Matrix3x3.rotation(angle_deg)
-            * Matrix3x3.scaling(scale)
-        )
+        """Standard TRS computed directly — avoids two intermediate matrix multiplications."""
+        r = math.radians(angle_deg)
+        c, s = math.cos(r), math.sin(r)
+        return Matrix3x3([
+            [c * scale.x, -s * scale.y, pos.x],
+            [s * scale.x,  c * scale.y, pos.y],
+            [0.0,           0.0,         1.0  ],
+        ])
 
     def inverse_translate(self) -> "Matrix3x3":
         """Returns a matrix that undoes only the translation component.
@@ -63,11 +72,8 @@ class Matrix3x3:
     # ── Application ─────────────────────────────────────────────────────────
 
     def multiply_vec(self, x: float, y: float) -> Tuple[float, float]:
-        """Transform a 2D point (w=1) through this matrix."""
-        nx = self.m[0][0] * x + self.m[0][1] * y + self.m[0][2]
-        ny = self.m[1][0] * x + self.m[1][1] * y + self.m[1][2]
-        w = self.m[2][0] * x + self.m[2][1] * y + self.m[2][2]
-        if w not in (0.0, 1.0):
-            nx /= w
-            ny /= w
-        return nx, ny
+        """Transform a 2D point through this matrix. Assumes affine (bottom row = [0, 0, 1])."""
+        return (
+            self.m[0][0] * x + self.m[0][1] * y + self.m[0][2],
+            self.m[1][0] * x + self.m[1][1] * y + self.m[1][2],
+        )
