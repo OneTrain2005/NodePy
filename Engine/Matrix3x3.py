@@ -1,17 +1,24 @@
 from __future__ import annotations
+
 import math
+from typing import List, Optional, Tuple
+
 from Engine.Vector2d import Vector2d
-from typing import List, Tuple, Optional
+
 
 class Matrix3x3:
     __slots__ = ("m",)
 
     def __init__(self, data: Optional[List[List[float]]] = None):
-        self.m: List[List[float]] = data if data else [
-            [1, 0, 0],
-            [0, 1, 0],
-            [0, 0, 1],
-        ]
+        self.m: List[List[float]] = (
+            data
+            if data
+            else [
+                [1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+            ]
+        )
 
     def __mul__(self, other: "Matrix3x3") -> "Matrix3x3":
         res = [[0.0] * 3 for _ in range(3)]
@@ -37,12 +44,13 @@ class Matrix3x3:
         return Matrix3x3([[scale.x, 0, 0], [0, scale.y, 0], [0, 0, 1]])
 
     @staticmethod
-    def make_transform(pos: Vector2d, angle_deg: float,
-                       scale: Vector2d) -> "Matrix3x3":
+    def make_transform(pos: Vector2d, angle_deg: float, scale: Vector2d) -> "Matrix3x3":
         """Standard TRS: translate * rotate * scale."""
-        return (Matrix3x3.translation(pos)
-                * Matrix3x3.rotation(angle_deg)
-                * Matrix3x3.scaling(scale))
+        return (
+            Matrix3x3.translation(pos)
+            * Matrix3x3.rotation(angle_deg)
+            * Matrix3x3.scaling(scale)
+        )
 
     def inverse_translate(self) -> "Matrix3x3":
         """Returns a matrix that undoes only the translation component.
@@ -58,7 +66,7 @@ class Matrix3x3:
         """Transform a 2D point (w=1) through this matrix."""
         nx = self.m[0][0] * x + self.m[0][1] * y + self.m[0][2]
         ny = self.m[1][0] * x + self.m[1][1] * y + self.m[1][2]
-        w  = self.m[2][0] * x + self.m[2][1] * y + self.m[2][2]
+        w = self.m[2][0] * x + self.m[2][1] * y + self.m[2][2]
         if w not in (0.0, 1.0):
             nx /= w
             ny /= w
