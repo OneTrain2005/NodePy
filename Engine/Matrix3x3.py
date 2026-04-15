@@ -156,3 +156,28 @@ class Matrix3x3:
             self.m[0][0] * x + self.m[0][1] * y + self.m[0][2],
             self.m[1][0] * x + self.m[1][1] * y + self.m[1][2],
         )
+
+    def decompose(self) -> Tuple[float, float, float, float, float]:
+        """
+        Extract ``(tx, ty, rot_deg, scale_x, scale_y)`` from an affine TRS matrix.
+
+        Works by reading the translation column directly and deriving rotation
+        and scale from the first two columns::
+
+            scale_x = |column 0| = hypot(m[0][0], m[1][0])
+            scale_y = |column 1| = hypot(m[0][1], m[1][1])
+            rot_deg = atan2(m[1][0], m[0][0])   (clockwise, degrees)
+
+        Assumes no shear.  Non-uniform scale is handled correctly as long as
+        the matrix was built via ``make_transform`` or equivalent TRS chain.
+
+        When applied to ``cam * node.global_matrix`` the camera zoom is folded
+        into ``scale_x`` / ``scale_y``, while ``rot_deg`` reflects only the
+        node's own rotation (zoom cancels in the atan2).
+        """
+        tx = self.m[0][2]
+        ty = self.m[1][2]
+        scale_x = math.hypot(self.m[0][0], self.m[1][0])
+        scale_y = math.hypot(self.m[0][1], self.m[1][1])
+        rot_deg = math.degrees(math.atan2(self.m[1][0], self.m[0][0]))
+        return tx, ty, rot_deg, scale_x, scale_y
