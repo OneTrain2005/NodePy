@@ -276,7 +276,7 @@ if Input.mouse_just_released(1):
 
 ### Sprite2D
 
-`Sprite2D` draws a solid-colour rectangle at the node's world position. It inherits the full transform pipeline, so it rotates, scales, and moves with its parent automatically. If you want it to do more than that no one is stopping you from modifying this file dear user. On top of that, your teacher lets you use Pillow iirc which opens many possibilities, but if you pull request that i'll have to decline because the repo needs to remain in pure python for educational purposes.
+`Sprite2D` draws a solid-colour rectangle at the node's world position. It inherits the full transform pipeline, so it rotates, scales, and moves with its parent automatically. If you want it to do more than that no one is stopping you from modifying this file dear user. On top of that, your teacher lets you use Pillow iirc which opens many possibilities.
 
 ```python
 from Engine.Sprite2D import Sprite2D
@@ -541,6 +541,9 @@ If you want to contribute:
 5. Open a pull request with a short description of what you added and why
 
 No contribution is too small. Fixing a typo in a docstring, adding a missing type hint, or writing a better code example in this README are all welcome.
+
+You can run the unit tests of this repo by using the `python -m pytest unit_tests/ -v` command.
+You can also write your own unit tests with pytest.
 
 If you are not sure where to start, open an issue describing what you want to build and we can figure it out together.
 
