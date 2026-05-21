@@ -8,9 +8,16 @@ from Engine.CollisionShape import CollisionShape
 from typing import Optional, List
 import time
 import tkinter as tk
+import tkinter.ttk as ttk
+
+
 class GameLoop:
     """
     Owns the tkinter root + canvas, wires up Input, drives the scene tree.
+
+    The canvas is wrapped in a ``ttk.Frame`` and automatically expands to
+    fill the window, so the game adapts to any size the user (or window
+    manager) gives it.
 
     Usage
     -----
@@ -22,25 +29,36 @@ class GameLoop:
     def __init__(self, width: int = 800, height: int = 600,
                  title: str = "PyEngine", bg: str = "#1a1a2e",
                  target_fps: int = 60):
-        self.width  = width
-        self.height = height
+        self._requested_width = width
+        self._requested_height = height
         self.target_fps = target_fps
-        self._frame_ms  = 1000 // target_fps
+        self._frame_ms = 1000 // target_fps
 
-        self.root   = tk.Tk()
+        self.root = tk.Tk()
         self.root.title(title)
-        self.root.resizable(False, False)
+        self.root.minsize(200, 150)
 
-        self.canvas = tk.Canvas(self.root, width=width, height=height,
+        # ttk layout: frame fills the root window
+        self.frame = ttk.Frame(self.root)
+        self.frame.pack(fill="both", expand=True)
+
+        # Canvas fills the frame and resizes with it
+        self.canvas = tk.Canvas(self.frame, width=width, height=height,
                                 bg=bg, highlightthickness=0)
-        self.canvas.pack()
+        self.canvas.pack(fill="both", expand=True)
+
+        self.width = width
+        self.height = height
 
         # Wire Input to tkinter events
-        self.root.bind("<KeyPress>",         Input._on_key_press)
-        self.root.bind("<KeyRelease>",       Input._on_key_release)
-        self.canvas.bind("<Motion>",         Input._on_mouse_move)
-        self.canvas.bind("<ButtonPress>",    Input._on_mouse_press)
-        self.canvas.bind("<ButtonRelease>",  Input._on_mouse_release)
+        self.root.bind("<KeyPress>", Input._on_key_press)
+        self.root.bind("<KeyRelease>", Input._on_key_release)
+        self.canvas.bind("<Motion>", Input._on_mouse_move)
+        self.canvas.bind("<ButtonPress>", Input._on_mouse_press)
+        self.canvas.bind("<ButtonRelease>", Input._on_mouse_release)
+
+        # Track canvas resizing so the camera viewport stays in sync
+        self.canvas.bind("<Configure>", self._on_resize)
 
         self._scene: Optional[Node] = None
         self._last_time = time.perf_counter()
@@ -48,6 +66,20 @@ class GameLoop:
         # FPS display
         self._fps_samples: List[float] = []
         self._fps_label_id: Optional[int] = None
+
+    def _on_resize(self, event: tk.Event) -> None:
+        """Update internal size and the active camera when the canvas changes."""
+        new_w = event.width
+        new_h = event.height
+        if new_w == self.width and new_h == self.height:
+            return
+        self.width = new_w
+        self.height = new_h
+
+        cam = Camera2D._active
+        if cam is not None:
+            cam.viewport_w = new_w
+            cam.viewport_h = new_h
 
     def set_scene(self, root_node: Node) -> None:
         self._scene = root_node
@@ -62,40 +94,38 @@ class GameLoop:
         return Matrix3x3()
 
     def _tick(self) -> None:
-        now   = time.perf_counter()
+        now = time.perf_counter()
         delta = now - self._last_time
         self._last_time = now
 
-        # ── Input: flush per-frame state before any _update sees it ──────────
+        # Input: flush per-frame state before any _update sees it
         Input._flush()
 
-        # ── Rebuild quadtree from all active collision shapes ─────────────────
-        # Done once here so every CollisionShape._update() this frame shares
-        # the same spatial index — O(n log n) instead of O(n²).
+        # Rebuild quadtree from all active collision shapes
         qt = Quadtree(bounds=(-4000, -4000, 4000, 4000))
         for shape in CollisionShape._all:
             if shape.visible:
                 qt.insert(shape)
         CollisionShape._quadtree = qt
 
-        # ── Update scene tree ────────────────────────────────────────────────
+        # Update scene tree
         if self._scene:
             self._scene._process(delta)
 
-        # ── Process deferred frees ───────────────────────────────────────────
+        # Process deferred frees
         if Node._deferred_free_queue:
             batch = list(Node._deferred_free_queue)
             Node._deferred_free_queue.clear()
             for node in batch:
                 node._perform_free()
 
-        # ── Render ───────────────────────────────────────────────────────────
+        # Render
         self.canvas.delete("all")
         view = self._get_view_matrix()
         if self._scene:
             self._scene._render(self.canvas, view)
 
-        # ── FPS overlay ──────────────────────────────────────────────────────
+        # FPS overlay — anchored to the top-right of the current canvas size
         if delta > 0:
             self._fps_samples.append(1.0 / delta)
             if len(self._fps_samples) > 30:
@@ -108,7 +138,7 @@ class GameLoop:
             font=("Helvetica", 9),
         )
 
-        # ── Schedule next frame ───────────────────────────────────────────────
+        # Schedule next frame
         elapsed_ms = int((time.perf_counter() - now) * 1000)
         delay = max(1, self._frame_ms - elapsed_ms)
         self.root.after(delay, self._tick)
