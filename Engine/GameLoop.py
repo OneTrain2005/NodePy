@@ -82,6 +82,13 @@ class GameLoop:
         if self._scene:
             self._scene._process(delta)
 
+        # ── Process deferred frees ───────────────────────────────────────────
+        if Node._deferred_free_queue:
+            batch = list(Node._deferred_free_queue)
+            Node._deferred_free_queue.clear()
+            for node in batch:
+                node._perform_free()
+
         # ── Render ───────────────────────────────────────────────────────────
         self.canvas.delete("all")
         view = self._get_view_matrix()

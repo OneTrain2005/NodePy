@@ -23,6 +23,8 @@ class Node:
     self.tree_exited    emitted when removed from tree
     """
 
+    _deferred_free_queue: List["Node"] = []
+
     def __init__(self, name: str, relative_pos: Optional[Vector2d] = None,
                  parent: Optional["Node"] = None):
         self.name = name
@@ -31,6 +33,7 @@ class Node:
         self._global_matrix = Matrix3x3()
         self._dirty = True
         self._ready_called = False
+        self._queued_for_free = False
 
         # Built-in signals
         self.tree_entered = Signal("tree_entered")
@@ -65,6 +68,27 @@ class Node:
             self.children.remove(child)
             child.parent = None
             child.tree_exited.emit(child)
+
+    def queue_free(self) -> None:
+        """Queue this node (and all its children) for deletion at the end of the frame."""
+        if not self._queued_for_free:
+            self._queued_for_free = True
+            Node._deferred_free_queue.append(self)
+
+    def _perform_free(self) -> None:
+        """Actually remove this node and its descendants from the tree."""
+        if not self._queued_for_free:
+            return
+        self._queued_for_free = False
+        for child in list(self.children):
+            child._queued_for_free = True
+            child._perform_free()
+        if self.parent is not None:
+            self.parent.remove_child(self)
+        # Clean up CollisionShape registry if applicable
+        from Engine.CollisionShape import CollisionShape
+        if isinstance(self, CollisionShape) and self in CollisionShape._all:
+            CollisionShape._all.remove(self)
 
     def get_child(self, name: str) -> Optional["Node"]:
         for c in self.children:

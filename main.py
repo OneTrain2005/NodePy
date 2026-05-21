@@ -77,10 +77,9 @@ class Player(Node):
         # Check if we hit a Coin's collision shape
         if other.parent is not None and isinstance(other.parent, Coin):
             coin: Coin = other.parent
-            if coin.visible:
-                coin.collect()
-                self.score += 1
-                self.score_changed.emit(self.score)
+            coin.collect()
+            self.score += 1
+            self.score_changed.emit(self.score)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -131,7 +130,7 @@ class Coin(Node):
         self.sprite.rotation = 45 + self._spin
 
     def collect(self) -> None:
-        self.visible = False
+        self.queue_free()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

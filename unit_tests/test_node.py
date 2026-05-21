@@ -280,3 +280,48 @@ class TestNodeProcess:
         p._process(0.016)
         assert p.delta == pytest.approx(0.016)
         assert c.delta == pytest.approx(0.016)
+
+
+class TestNodeQueueFree:
+    def setup_method(self):
+        Node._deferred_free_queue.clear()
+
+    def test_queue_free_flags_node(self):
+        n = Node("n")
+        n.queue_free()
+        assert n._queued_for_free is True
+        assert n in Node._deferred_free_queue
+
+    def test_queue_free_is_idempotent(self):
+        n = Node("n")
+        n.queue_free()
+        n.queue_free()
+        assert Node._deferred_free_queue.count(n) == 1
+
+    def test_perform_free_removes_from_parent(self):
+        p = Node("p")
+        c = Node("c", parent=p)
+        c.queue_free()
+        c._perform_free()
+        assert c.parent is None
+        assert c not in p.children
+
+    def test_perform_free_emits_tree_exited(self):
+        p = Node("p")
+        c = Node("c", parent=p)
+        received = []
+        c.tree_exited.connect(lambda node: received.append(node.name))
+        c.queue_free()
+        c._perform_free()
+        assert received == ["c"]
+
+    def test_perform_free_frees_children(self):
+        p = Node("p")
+        c = Node("c", parent=p)
+        gc = Node("gc", parent=c)
+        c.queue_free()
+        c._perform_free()
+        assert gc.parent is None
+        assert gc not in c.children
+        assert c.parent is None
+        assert c not in p.children
