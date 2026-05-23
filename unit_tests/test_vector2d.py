@@ -184,3 +184,93 @@ class TestVector2dRepr:
     def test_repr_format(self):
         v = Vector2d(1.5, 2.75)
         assert repr(v) == "Vector2d(1.50, 2.75)"
+
+
+class TestVector2dNeg:
+    def test_neg(self):
+        v = Vector2d(3, -4)
+        n = -v
+        assert n.x == -3
+        assert n.y == 4
+
+    def test_neg_does_not_mutate(self):
+        v = Vector2d(1, 2)
+        _ = -v
+        assert v.x == 1 and v.y == 2
+
+
+class TestVector2dMulVector:
+    def test_mul_vector_hadamard(self):
+        a = Vector2d(2, 3)
+        b = Vector2d(4, 5)
+        c = a * b
+        assert c.x == 8
+        assert c.y == 15
+
+    def test_mul_vector_does_not_mutate(self):
+        a = Vector2d(2, 3)
+        b = Vector2d(4, 5)
+        _ = a * b
+        assert a.x == 2 and a.y == 3
+        assert b.x == 4 and b.y == 5
+
+
+class TestVector2dRmul:
+    def test_rmul_scalar(self):
+        v = Vector2d(2, 3)
+        c = 4 * v
+        assert c.x == 8
+        assert c.y == 12
+
+    def test_rmul_negative_scalar(self):
+        v = Vector2d(2, -3)
+        c = -2 * v
+        assert c.x == -4
+        assert c.y == 6
+
+
+class TestVector2dTruediv:
+    def test_truediv_scalar(self):
+        v = Vector2d(6, 9)
+        c = v / 3
+        assert c.x == 2.0
+        assert c.y == 3.0
+
+    def test_truediv_negative_scalar(self):
+        v = Vector2d(6, -9)
+        c = v / -3
+        assert c.x == -2.0
+        assert c.y == 3.0
+
+    def test_truediv_does_not_mutate(self):
+        v = Vector2d(6, 9)
+        _ = v / 3
+        assert v.x == 6 and v.y == 9
+
+
+class TestVector2dIter:
+    def test_iter_yields_components(self):
+        v = Vector2d(7, 8)
+        assert list(v) == [7.0, 8.0]
+
+    def test_iter_unpacking(self):
+        x, y = Vector2d(3, 4)
+        assert x == 3.0
+        assert y == 4.0
+
+
+class TestVector2dMatmul:
+    def test_matmul_same_as_dot(self):
+        a = Vector2d(2, 3)
+        b = Vector2d(4, 5)
+        assert a @ b == a.dot(b)
+
+    def test_matmul_orthogonal(self):
+        a = Vector2d(1, 0)
+        b = Vector2d(0, 1)
+        assert a @ b == 0.0
+
+    def test_matmul_parallel(self):
+        a = Vector2d(2, 0)
+        b = Vector2d(3, 0)
+        assert a @ b == 6.0
