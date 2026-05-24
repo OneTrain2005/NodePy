@@ -80,6 +80,11 @@ class CollisionShape(Node):
         x0, y0, x1, y1 = self.get_aabb()
         return x0 <= point.x <= x1 and y0 <= point.y <= y1
 
+    def __contains__(self, item) -> bool:
+        if isinstance(item, Vector2d):
+            return self.contains_point(item)
+        return False
+
     def _update(self, delta: float) -> None:
         # Skip entirely if nothing is listening — avoids quadtree queries for
         # the majority of passive shapes (e.g. coin colliders with no handlers).

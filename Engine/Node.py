@@ -96,6 +96,39 @@ class Node:
                 return c
         return None
 
+    # ── Container sugars ─────────────────────────────────────────────────────
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self.children[key]
+        if isinstance(key, str):
+            child = self.get_child(key)
+            if child is None:
+                raise KeyError(f"Node {self.name!r} has no child named {key!r}")
+            return child
+        raise TypeError(f"Node indices must be int or str, not {type(key).__name__}")
+
+    def __iter__(self):
+        return iter(self.children)
+
+    def __len__(self) -> int:
+        return len(self.children)
+
+    def __contains__(self, item):
+        if isinstance(item, Node):
+            return item in self.children
+        if isinstance(item, str):
+            return self.get_child(item) is not None
+        return False
+
+    def __iadd__(self, child: "Node") -> "Node":
+        self.add_child(child)
+        return self
+
+    def __isub__(self, child: "Node") -> "Node":
+        self.remove_child(child)
+        return self
+
     # ── Properties with auto-invalidation ───────────────────────────────────
 
     @property

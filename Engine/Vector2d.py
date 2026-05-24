@@ -45,6 +45,14 @@ class Vector2d:
             return NotImplemented
         return Vector2d(self.x / o, self.y / o)
 
+    def __floordiv__(self, o: float) -> Vector2d:
+        if not isinstance(o, (int, float)):
+            return NotImplemented
+        return Vector2d(self.x // o, self.y // o)
+
+    def __abs__(self) -> float:
+        return self.length()
+
     # Representation
     def __repr__(self) -> str:
         return f"Vector2d({self.x:.2f}, {self.y:.2f})"

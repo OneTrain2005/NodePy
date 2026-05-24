@@ -282,6 +282,89 @@ class TestNodeProcess:
         assert c.delta == pytest.approx(0.016)
 
 
+class TestNodeContainerSugar:
+    def test_getitem_by_name(self):
+        p = Node("p")
+        c = Node("c", parent=p)
+        assert p["c"] is c
+
+    def test_getitem_by_index(self):
+        p = Node("p")
+        c1 = Node("c1", parent=p)
+        c2 = Node("c2", parent=p)
+        assert p[0] is c1
+        assert p[1] is c2
+
+    def test_getitem_missing_raises_keyerror(self):
+        p = Node("p")
+        with pytest.raises(KeyError):
+            _ = p["missing"]
+
+    def test_getitem_bad_type_raises_typeerror(self):
+        p = Node("p")
+        with pytest.raises(TypeError):
+            _ = p[1.5]
+
+    def test_iter_yields_children(self):
+        p = Node("p")
+        c1 = Node("c1", parent=p)
+        c2 = Node("c2", parent=p)
+        assert list(p) == [c1, c2]
+
+    def test_len_returns_child_count(self):
+        p = Node("p")
+        assert len(p) == 0
+        Node("c1", parent=p)
+        assert len(p) == 1
+        Node("c2", parent=p)
+        assert len(p) == 2
+
+    def test_contains_child_ref(self):
+        p = Node("p")
+        c = Node("c", parent=p)
+        assert c in p
+
+    def test_contains_missing_child_ref(self):
+        p = Node("p")
+        c = Node("c")
+        assert c not in p
+
+    def test_contains_by_name(self):
+        p = Node("p")
+        Node("c", parent=p)
+        assert "c" in p
+
+    def test_contains_missing_name(self):
+        p = Node("p")
+        assert "missing" not in p
+
+    def test_iadd_adds_child(self):
+        p = Node("p")
+        c = Node("c")
+        p += c
+        assert c.parent is p
+        assert c in p.children
+
+    def test_iadd_returns_self(self):
+        p = Node("p")
+        c = Node("c")
+        result = p.__iadd__(c)
+        assert result is p
+
+    def test_isub_removes_child(self):
+        p = Node("p")
+        c = Node("c", parent=p)
+        p -= c
+        assert c.parent is None
+        assert c not in p.children
+
+    def test_isub_returns_self(self):
+        p = Node("p")
+        c = Node("c", parent=p)
+        result = p.__isub__(c)
+        assert result is p
+
+
 class TestNodeQueueFree:
     def setup_method(self):
         Node._deferred_free_queue.clear()

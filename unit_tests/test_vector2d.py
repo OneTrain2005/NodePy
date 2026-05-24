@@ -274,3 +274,33 @@ class TestVector2dMatmul:
         a = Vector2d(2, 0)
         b = Vector2d(3, 0)
         assert a @ b == 6.0
+
+
+class TestVector2dAbs:
+    def test_abs_zero(self):
+        assert abs(Vector2d(0, 0)) == 0.0
+
+    def test_abs_positive(self):
+        assert abs(Vector2d(3, 4)) == 5.0
+
+    def test_abs_negative_components(self):
+        assert abs(Vector2d(-3, -4)) == 5.0
+
+
+class TestVector2dFloordiv:
+    def test_floordiv_scalar(self):
+        v = Vector2d(7, 9)
+        c = v // 2
+        assert c.x == 3.0
+        assert c.y == 4.0
+
+    def test_floordiv_negative_scalar(self):
+        v = Vector2d(7, -9)
+        c = v // -2
+        assert c.x == -4.0
+        assert c.y == 4.0
+
+    def test_floordiv_does_not_mutate(self):
+        v = Vector2d(7, 9)
+        _ = v // 2
+        assert v.x == 7 and v.y == 9

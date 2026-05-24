@@ -96,6 +96,52 @@ class TestSignalEmit:
         assert order == [1, 2, 3]
 
 
+class TestSignalCall:
+    def test_call_emits_no_args(self):
+        sig = Signal("test")
+        called = []
+        sig.connect(lambda: called.append(True))
+        sig()
+        assert len(called) == 1
+
+    def test_call_emits_with_args(self):
+        sig = Signal("test")
+        received = []
+        sig.connect(lambda a, b: received.append((a, b)))
+        sig(1, 2)
+        assert received == [(1, 2)]
+
+
+class TestSignalIaddIsub:
+    def test_iadd_connects(self):
+        sig = Signal("test")
+        called = []
+        sig += lambda: called.append(True)
+        sig.emit()
+        assert len(called) == 1
+
+    def test_isub_disconnects(self):
+        sig = Signal("test")
+        called = []
+        fn = lambda: called.append(True)
+        sig += fn
+        sig -= fn
+        sig.emit()
+        assert len(called) == 0
+
+    def test_iadd_returns_self(self):
+        sig = Signal("test")
+        result = sig.__iadd__(lambda: None)
+        assert result is sig
+
+    def test_isub_returns_self(self):
+        sig = Signal("test")
+        fn = lambda: None
+        sig += fn
+        result = sig.__isub__(fn)
+        assert result is sig
+
+
 class TestSignalRepr:
     def test_repr_empty(self):
         sig = Signal("health_changed")

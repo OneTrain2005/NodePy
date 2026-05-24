@@ -83,6 +83,11 @@ class TestMatrix3x3Multiplication:
             for j in range(3):
                 assert left.m[i][j] == pytest.approx(right.m[i][j], abs=1e-9)
 
+    def test_matmul_same_as_mul(self):
+        a = Matrix3x3.rotation(30)
+        b = Matrix3x3.scaling(Vector2d(2, 3))
+        assert (a @ b).m == (a * b).m
+
 
 class TestMatrix3x3MakeTransform:
     def test_make_transform_equivalent_to_trs(self):

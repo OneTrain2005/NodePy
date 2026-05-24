@@ -126,6 +126,24 @@ class TestCollisionShapeContainsPoint:
         assert cs.contains_point(Vector2d(10, 0)) is True
 
 
+class TestCollisionShapeContains:
+    def test_contains_point(self):
+        parent = Node("parent", relative_pos=Vector2d(0, 0))
+        cs = CollisionShape("cs", width=20, height=20, parent=parent)
+        assert Vector2d(0, 0) in cs
+
+    def test_does_not_contain_point(self):
+        parent = Node("parent", relative_pos=Vector2d(0, 0))
+        cs = CollisionShape("cs", width=20, height=20, parent=parent)
+        assert Vector2d(100, 100) not in cs
+
+    def test_contains_non_vector_returns_false(self):
+        parent = Node("parent")
+        cs = CollisionShape("cs", width=20, height=20, parent=parent)
+        assert "string" not in cs
+        assert 42 not in cs
+
+
 class TestCollisionShapeSignals:
     def test_body_entered_exists(self):
         parent = Node("parent")

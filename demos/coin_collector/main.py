@@ -1,5 +1,5 @@
 """
-Demo scene for pyengine.
+Demo scene for pyengine. Built with NodePy version 1.1
 
 What's happening
 ----------------
@@ -15,6 +15,11 @@ HUD     Screen-space label showing score and controls.
 
 import math
 import random
+import sys
+from pathlib import Path
+
+# Allow imports from the project root (two levels up from this demo)
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from PIL import Image
 
@@ -98,7 +103,7 @@ def _get_coin_texture() -> ImageTexture:
         # Load pre-scaled to the display size so the 256×256 source is
         # discarded immediately — only a 24×24 RGBA image lives in memory.
         _coin_texture = ImageTexture.load(
-            "demos/coin.png",
+            "coin.png",
             native_size=_COIN_DISPLAY_SIZE,
             filter_mode=Image.BOX,
         )

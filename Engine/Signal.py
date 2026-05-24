@@ -32,5 +32,16 @@ class Signal:
         for cb in list(self._listeners):
             cb(*args, **kwargs)
 
+    def __call__(self, *args, **kwargs) -> None:
+        self.emit(*args, **kwargs)
+
+    def __iadd__(self, callback: Callable) -> "Signal":
+        self.connect(callback)
+        return self
+
+    def __isub__(self, callback: Callable) -> "Signal":
+        self.disconnect(callback)
+        return self
+
     def __repr__(self) -> str:
         return f"Signal({self.name!r}, {len(self._listeners)} listeners)"

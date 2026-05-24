@@ -53,6 +53,9 @@ class Matrix3x3:
             ]
         )
 
+    def __matmul__(self, other: "Matrix3x3") -> "Matrix3x3":
+        return self.__mul__(other)
+
     def __mul__(self, other: "Matrix3x3") -> "Matrix3x3":
         """
         Return the matrix product ``self @ other``.
