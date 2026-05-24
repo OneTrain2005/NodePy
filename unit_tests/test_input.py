@@ -100,10 +100,9 @@ class TestInputVector:
 
 class TestInputMouse:
     def test_mouse_position_default(self):
-        # The mouse_position property is not a proper classmethod property,
-        # so we test the backing field directly.
-        assert Input._mouse_pos.x == 0.0
-        assert Input._mouse_pos.y == 0.0
+        pos = Input.mouse_position()
+        assert pos.x == 0.0
+        assert pos.y == 0.0
 
     def test_is_mouse_pressed(self):
         Input._mouse_held.add(1)

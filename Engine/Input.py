@@ -16,7 +16,7 @@ class Input:
 
     Mouse
     -----
-    Input.mouse_position        Vector2d in screen space
+    Input.mouse_position()      Vector2d in screen space
     Input.is_mouse_pressed(1)   # 1=left, 2=middle, 3=right
     Input.mouse_just_pressed(1)
     Input.mouse_just_released(1)
@@ -116,8 +116,8 @@ class Input:
         """Returns a (possibly un-normalised) direction vector from four actions."""
         return Vector2d(cls.get_axis(left, right), cls.get_axis(up, down))
 
-    @property
-    def mouse_position(cls) -> Vector2d:   # usable as instance or class
+    @classmethod
+    def mouse_position(cls) -> Vector2d:
         return cls._mouse_pos
 
     @classmethod
