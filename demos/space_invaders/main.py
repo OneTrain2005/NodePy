@@ -1,3 +1,9 @@
+"""
+Demo scene for NodePy. Built with NodePy version 1.1
+
+It's a space invaders clone.
+"""
+
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))

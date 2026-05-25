@@ -2,6 +2,7 @@ import random
 from Engine.Node import Node
 from Engine.Input import Input
 from Engine.Vector2d import Vector2d
+from player import Player
 from enemy import Enemy, EnemyFormation
 from shield import Shield
 from mothership import Mothership
@@ -46,7 +47,7 @@ class GameManager(Node):
         if isinstance(target, Bullet):
             target.queue_free()
             return
-        if isinstance(target, type(self.player)):
+        if isinstance(target, Player):
             target.hit()
         elif hasattr(target, "die"):
             target.die()

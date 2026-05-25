@@ -1,5 +1,5 @@
 """
-Demo scene for pyengine. Built with NodePy version 1.1
+Demo scene for NodePy. Built with NodePy version 1.1
 
 What's happening
 ----------------
@@ -304,7 +304,7 @@ class DebugOverlay(Node):
 
 if __name__ == "__main__":
     loop = GameLoop(
-        width=800, height=600, title="PyEngine demo — collect the coins", bg="#0f0f1e"
+        width=800, height=600, title="NodePy demo — collect the coins", bg="#0f0f1e"
     )
     scene = build_scene(loop)
     loop.set_scene(scene)

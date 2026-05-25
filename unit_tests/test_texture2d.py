@@ -27,14 +27,14 @@ class TestTexture2DBase:
 
 class TestImageTexture:
     def test_load_existing_file(self):
-        tex = ImageTexture.load("demos/coin.png")
+        tex = ImageTexture.load("demos/coin_collector/coin.png")
         assert tex.width > 0
         assert tex.height > 0
         assert os.path.isabs(tex.path)
 
     def test_load_caches_same_path(self):
-        tex1 = ImageTexture.load("demos/coin.png")
-        tex2 = ImageTexture.load("demos/coin.png")
+        tex1 = ImageTexture.load("demos/coin_collector/coin.png")
+        tex2 = ImageTexture.load("demos/coin_collector/coin.png")
         assert tex1 is tex2
 
     def test_load_missing_file_raises(self):
@@ -42,17 +42,17 @@ class TestImageTexture:
             ImageTexture.load("demos/nonexistent.png")
 
     def test_load_with_native_size(self):
-        tex = ImageTexture.load("demos/coin.png", native_size=(16, 16))
+        tex = ImageTexture.load("demos/coin_collector/coin.png", native_size=(16, 16))
         assert tex.width == 16
         assert tex.height == 16
 
     def test_load_different_sizes_not_same_cache(self):
-        tex1 = ImageTexture.load("demos/coin.png")
-        tex2 = ImageTexture.load("demos/coin.png", native_size=(16, 16))
+        tex1 = ImageTexture.load("demos/coin_collector/coin.png")
+        tex2 = ImageTexture.load("demos/coin_collector/coin.png", native_size=(16, 16))
         assert tex1 is not tex2
 
     def test_path_is_absolute(self):
-        tex = ImageTexture.load("demos/coin.png")
+        tex = ImageTexture.load("demos/coin_collector/coin.png")
         assert tex.path.startswith("/")
 
 

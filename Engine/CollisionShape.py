@@ -51,6 +51,13 @@ class CollisionShape(Node):
         self._cached_aabb: Optional[Tuple[float, float, float, float]] = None
         CollisionShape._all.append(self)
 
+        # Remove from global registry when detached from the tree
+        self.tree_exited.connect(self._on_tree_exited)
+
+    def _on_tree_exited(self, node: "Node") -> None:
+        if self in CollisionShape._all:
+            CollisionShape._all.remove(self)
+
     def _ready(self) -> None:
         pass
 

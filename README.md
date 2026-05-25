@@ -8,22 +8,30 @@ This README will walk you through **how to use** the engine and **how it works u
 
 ## Table of contents
 
-1. [Getting started](#getting-started)
-2. [Project structure](#project-structure)
-3. [Core concepts](#core-concepts)
-   - [The scene tree](#the-scene-tree)
-   - [The transform pipeline](#the-transform-pipeline)
-   - [The game loop](#the-game-loop)
-4. [Using the engine](#using-the-engine)
-   - [Creating nodes](#creating-nodes)
-   - [Signals](#signals)
-   - [Input](#input)
-   - [ColorRect2D](#colorrect2d)
-   - [Sprite2D](#sprite2d)
-   - [CollisionShape](#collisionshape)
-   - [Camera2D](#camera2d)
-5. [Design patterns used](#design-patterns-used)
-6. [Contributing](#contributing)
+- [NodePy 🪢🥧](#nodepy-)
+  - [Table of contents](#table-of-contents)
+  - [Getting started](#getting-started)
+  - [Project structure](#project-structure)
+  - [Core concepts](#core-concepts)
+    - [The scene tree](#the-scene-tree)
+    - [The transform pipeline](#the-transform-pipeline)
+    - [The game loop](#the-game-loop)
+  - [Using the engine](#using-the-engine)
+    - [Creating nodes](#creating-nodes)
+    - [Signals](#signals)
+    - [Input](#input)
+    - [ColorRect2D](#colorrect2d)
+    - [Sprite2D](#sprite2d)
+    - [CollisionShape](#collisionshape)
+    - [Camera2D](#camera2d)
+  - [Design patterns used](#design-patterns-used)
+    - [Composite — the scene tree](#composite--the-scene-tree)
+    - [Observer — signals](#observer--signals)
+    - [Template method — the node lifecycle](#template-method--the-node-lifecycle)
+    - [Singleton — Input, TextureManager, and CollisionShape registry](#singleton--input-texturemanager-and-collisionshape-registry)
+    - [Dirty flag — transform caching](#dirty-flag--transform-caching)
+    - [Strategy — Camera2D](#strategy--camera2d)
+  - [Contributing](#contributing)
 
 ---
 
@@ -375,6 +383,8 @@ class Coin(Node):
 ```
 
 **Prewarming** — if you know a sprite will spin or zoom, bake every rotation frame up front so no PIL work happens during gameplay:
+
+**Note:** — the recommended image format for NodePy is webp. You *can* use use any format but each will come with their drawbacks. For instance png will come with a significant toll on game performance. To convert images from a format to another you can use [outilsenligne.ca](https://www.outilsenligne.ca/) — *A completely free tool platform for Quebec students.*
 
 ```python
 from Engine.TextureManager import TextureManager

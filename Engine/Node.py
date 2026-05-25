@@ -85,10 +85,6 @@ class Node:
             child._perform_free()
         if self.parent is not None:
             self.parent.remove_child(self)
-        # Clean up CollisionShape registry if applicable
-        from Engine.CollisionShape import CollisionShape
-        if isinstance(self, CollisionShape) and self in CollisionShape._all:
-            CollisionShape._all.remove(self)
 
     def get_child(self, name: str) -> Optional["Node"]:
         for c in self.children:
