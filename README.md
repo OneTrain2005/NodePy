@@ -1,6 +1,6 @@
 # NodePy 🪢🥧
 
-A Godot-inspired 2D game engine built entirely in Python and tkinter. No external dependencies. No installation. Just Python.
+A Godot-inspired 2D game engine built in Python and tkinter. One external dependency — Pillow — for image textures. Everything else is pure standard library.
 
 This README will walk you through **how to use** the engine and **how it works under the hood** — including the software design patterns that make it tick, with links to deeper reading for each one.
 
@@ -18,6 +18,7 @@ This README will walk you through **how to use** the engine and **how it works u
    - [Creating nodes](#creating-nodes)
    - [Signals](#signals)
    - [Input](#input)
+   - [ColorRect2D](#colorrect2d)
    - [Sprite2D](#sprite2d)
    - [CollisionShape](#collisionshape)
    - [Camera2D](#camera2d)
@@ -28,19 +29,31 @@ This README will walk you through **how to use** the engine and **how it works u
 
 ## Getting started
 
-Make sure you have Python 3.10+ installed. tkinter ships with Python on most platforms — if it is missing, install it with your package manager :
+Make sure you have **Python 3.10+** and **Pillow** installed. tkinter ships with Python on most platforms — if it is missing, install it with your package manager:
 - `sudo apt install python3-tk` on Debian based OS
 - `sudo pacman -S tk` on Arch based OS
 
-Clone the repo and run the demo:
+Install Pillow:
+
+```bash
+pip install Pillow
+```
+
+Clone the repo and run a demo:
 
 ```bash
 git clone https://github.com/OneTrain2005/NodePy.git
 cd NodePy
-python3 main.py
+python3 demos/coin_collector/main.py
 ```
 
-You should see a window with a player square you can move with **WASD** or the **arrow keys**, and spinning coins to collect.
+You should see a window with a player square you can move with **WASD** or the **arrow keys**, and spinning textured coins to collect.
+
+There is also a **space invaders** demo:
+
+```bash
+python3 demos/space_invaders/main.py
+```
 
 ---
 
@@ -49,17 +62,24 @@ You should see a window with a player square you can move with **WASD** or the *
 ```
 .
 ├── Engine
-│   ├── Camera2D.py         # Viewport camera with zoom and smooth follow
-│   ├── CollisionShape.py   # AABB hit detection + body_entered / body_exited
-│   ├── GameLoop.py         # Owns the window, drives update + render each
-│   ├── Input.py            # Keyboard and mouse state, polled per frame
-│   ├── Matrix3x3.py        # Homogeneous 2D transform math (TRS)
-│   ├── Node.py             # Base class for every object in the scene
-│   ├── Signal.py           # Lightweight event system
-│   ├── Sprite2D.py         # Draws a rectangle in world space (As of release 1.0)
-│   └── Vector2d.py         # 2D vector with arithmetic helpers
+│   ├── Camera2D.py         # Viewport camera with zoom and smooth follow
+│   ├── CollisionShape.py   # AABB hit detection + body_entered / body_exited
+│   ├── ColorRect2D.py      # Solid-colour rectangle in world space
+│   ├── GameLoop.py         # Owns the window, drives update + render each frame
+│   ├── Input.py            # Keyboard and mouse state, polled per frame
+│   ├── Matrix3x3.py        # Homogeneous 2D transform math (TRS)
+│   ├── Node.py             # Base class for every object in the scene
+│   ├── Quadtree.py         # Spatial partitioning for broadphase collision
+│   ├── Signal.py           # Lightweight event system
+│   ├── Sprite2D.py         # Textured sprite with rotation, scale, and camera zoom
+│   ├── Texture2D.py        # PIL image wrapper + file loading cache
+│   ├── TextureManager.py   # LRU cache of baked PhotoImages (resize + rotate)
+│   └── Vector2d.py         # 2D vector with arithmetic helpers
+├── demos
+│   ├── coin_collector/     # WASD movement, camera follow, textured coins
+│   └── space_invaders/     # Full mini-game with sprites, shields, enemies
+├── unit_tests/             # pytest suite
 ├── LICENSE                 # MIT LICENSE, this project is open source
-├── main.py                 # Demo scene — start reading here
 └── README.md               # Read it
 ```
 
@@ -75,10 +95,10 @@ Everything in the engine is a **Node**. Nodes are arranged in a tree: each node 
 Root
 ├── World
 │   ├── Player
-│   │   ├── Sprite2D  (visual)
-│   │   └── CollisionShape  (hitbox)
+│   │   ├── ColorRect2D   (visual)
+│   │   └── CollisionShape (hitbox)
 │   ├── Coin
-│   │   ├── Sprite2D
+│   │   ├── Sprite2D      (textured visual)
 │   │   └── CollisionShape
 │   └── Camera2D
 └── HUD  (screen-space UI, lives outside World)
@@ -102,12 +122,13 @@ The engine uses a **dirty flag** to avoid recomputing transforms every frame. Wh
 
 ### The game loop
 
-Each frame, `GameLoop` does three things in order:
+Each frame, `GameLoop` does four things in order:
 
 ```
-1. Input._flush()           clear "just pressed" state from last frame
-2. scene._process(delta)    call _update(delta) on every node, top to bottom
-3. scene._render(canvas)    call _draw(canvas, camera) on every node, top to bottom
+1. Input._flush()               clear "just pressed" state from last frame
+2. rebuild Quadtree             spatial index of all CollisionShapes
+3. scene._process(delta)        call _update(delta) on every node, top to bottom
+4. scene._render(canvas)        call _draw(canvas, camera) on every node, top to bottom
 ```
 
 `delta` is the number of seconds since the last frame (typically around 0.016 for 60 fps). **Always multiply movement and time-based values by delta** — this makes your game run at the same speed regardless of frame rate.
@@ -181,6 +202,28 @@ You can toggle a node (and all its children) off completely:
 
 ```python
 coin.visible = False   # stops _update and _draw for the whole subtree
+```
+
+You can also safely delete a node from inside its own `_update`:
+
+```python
+self.queue_free()   # removed at the end of the current frame
+```
+
+**Tree sugar:**
+
+```python
+# Add / remove with operators
+world += player       # same as world.add_child(player)
+world -= player       # same as world.remove_child(player)
+
+# Access children by name or index
+player = world["Player"]
+first  = world[0]
+
+# Check membership
+if "Player" in world:
+    ...
 ```
 
 ### Signals
@@ -267,19 +310,19 @@ Input.add_action("shoot", ["f", "Control_L"])
 Mouse:
 
 ```python
-pos = Input._mouse_pos                  # Vector2d in screen space
+pos = Input.mouse_position()            # Vector2d in screen space
 if Input.is_mouse_pressed(1):           # 1=left, 2=middle, 3=right
     print(f"Click at {pos.x}, {pos.y}")
 if Input.mouse_just_released(1):
     print("Released")
 ```
 
-### Sprite2D
+### ColorRect2D
 
-`Sprite2D` draws a solid-colour rectangle at the node's world position. It inherits the full transform pipeline, so it rotates, scales, and moves with its parent automatically. If you want it to do more than that no one is stopping you from modifying this file dear user. On top of that, your teacher lets you use Pillow iirc which opens many possibilities.
+`ColorRect2D` draws a solid-colour rectangle at the node's world position. It inherits the full transform pipeline, so it rotates, scales, and moves with its parent automatically.
 
 ```python
-from Engine.Sprite2D import Sprite2D
+from Engine.ColorRect2D import ColorRect2D
 from Engine.Vector2d import Vector2d
 
 class Player(Node):
@@ -287,7 +330,7 @@ class Player(Node):
         super().__init__("Player")
 
         # A 32×32 yellow square, centred on this node's origin
-        self.sprite = Sprite2D(
+        self.sprite = ColorRect2D(
             "sprite",
             width=32, height=32,
             color="#f6c90e",
@@ -301,7 +344,43 @@ class Player(Node):
         self.sprite.rotation = self.sprite.rotation + 90 * delta
 ```
 
-Because `Sprite2D` is just a `Node`, you can nest sprites inside each other to build composite visuals — a body with separately rotating arms, for example.
+Because `ColorRect2D` is just a `Node`, you can nest them inside each other to build composite visuals — a body with separately rotating arms, for example.
+
+### Sprite2D
+
+`Sprite2D` draws a **texture** (a `Texture2D` image) in world space. Rotation, scale, and camera zoom are all baked into a cached `PhotoImage` by the `TextureManager`, so sprites look crisp at any angle and zoom level.
+
+```python
+from PIL import Image
+from Engine.Sprite2D import Sprite2D
+from Engine.Texture2D import ImageTexture
+
+class Coin(Node):
+    def __init__(self):
+        super().__init__("Coin")
+
+        # Load from disk — cached by path so the same file is never read twice
+        texture = ImageTexture.load("coin.png", native_size=(24, 24))
+
+        self.sprite = Sprite2D(
+            "sprite",
+            texture=texture,
+            width=24, height=24,
+            filter_mode=Image.NEAREST,   # pixel-art look, fastest bake
+            parent=self,
+        )
+
+    def _update(self, delta):
+        self.sprite.rotation = self.sprite.rotation + 120 * delta
+```
+
+**Prewarming** — if you know a sprite will spin or zoom, bake every rotation frame up front so no PIL work happens during gameplay:
+
+```python
+from Engine.TextureManager import TextureManager
+
+TextureManager.instance().prewarm(texture, w_px=24, h_px=24, filter_mode=Image.NEAREST)
+```
 
 ### CollisionShape
 
@@ -314,7 +393,7 @@ class Enemy(Node):
     def __init__(self):
         super().__init__("Enemy")
 
-        self.sprite = Sprite2D("sprite", 24, 24, color="red", parent=self)
+        self.sprite = ColorRect2D("sprite", 24, 24, color="red", parent=self)
         self.col    = CollisionShape(
             "col",
             width=24, height=24,
@@ -327,18 +406,18 @@ class Enemy(Node):
         print(f"{self.name} was hit by {other.parent.name}!")
 ```
 
-Every `CollisionShape` registers itself in a global list. Each frame, each shape checks all others for overlap and fires `body_entered` / `body_exited` accordingly. Turn off `debug_draw` once you are done testing.
+Collision detection uses a **quadtree** for broadphase: each frame `GameLoop` rebuilds a spatial index, and each `CollisionShape` only checks shapes that are nearby. This scales far better than the old O(n²) scan. Turn off `debug_draw` once you are done testing.
 
 You can also check a single point (handy for mouse interaction):
 
 ```python
-if self.col.contains_point(Input._mouse_pos):
+if self.col.contains_point(Input.mouse_position()):
     print("Mouse is over this object")
 ```
 
 ### Camera2D
 
-`Camera2D` moves the viewport so a world position stays centred on screen. Make one active and the `GameLoop` will use it automatically.
+`Camera2D` moves the viewport so a world position stays centred on screen. Make one active and the `GameLoop` will use it automatically. The canvas now resizes with the window, and the camera viewport stays in sync.
 
 ```python
 from Engine.Camera2D import Camera2D
@@ -458,7 +537,7 @@ You never call `_update` directly — the engine calls it for you at the right t
 
 ---
 
-### Singleton — Input and CollisionShape registry
+### Singleton — Input, TextureManager, and CollisionShape registry
 
 > [refactoring.guru/design-patterns/singleton](https://refactoring.guru/design-patterns/singleton)
 
@@ -470,9 +549,11 @@ if Input.is_action_just_pressed("jump"):
     self.jump()
 ```
 
+`TextureManager` is a lazily-created singleton that owns every `PhotoImage` the engine bakes. If the Python `PhotoImage` object were garbage-collected, tkinter would silently stop drawing it; the manager prevents that by keeping the sole long-lived reference.
+
 `CollisionShape` uses a similar approach for its `_all` registry: a class-level list that every shape registers into when created, so they can find each other without a central manager object.
 
-The trade-off is that singletons make testing harder (global state is harder to isolate) and can hide dependencies. This is why experienced engineers use them sparingly and only for truly global concepts like input or a renderer.
+The trade-off is that singletons make testing harder (global state is harder to isolate) and can hide dependencies. This is why experienced engineers use them sparingly and only for truly global concepts like input, texture caching, or a renderer.
 
 ---
 
@@ -528,8 +609,6 @@ Here are some things that are genuinely missing and would make great first contr
 - **`TileMap`** — render a grid of tiles from a tile sheet
 - **`AudioNode`** — play `.wav` files using the `wave` + `tkinter` audio modules
 - **Scene serialisation** — save and load a scene tree to/from JSON
-- **Broadphase collision** — the current O(n²) check becomes slow with many shapes; a spatial grid or quadtree would fix that
-- **Safe deletion of a node within its update method** — a node attempting to delete itself in its update method as of release 1.0 could cause crashes. The Godot game engine has fixed this issue by creating the QueueFree method. It would be great if this engine had it too
 - **A GUI editor** — a second tkinter window that lets you place and configure nodes visually and save scenes to disk
 
 If you want to contribute:
@@ -537,13 +616,12 @@ If you want to contribute:
 1. Fork the repo on GitHub
 2. Create a branch: `git checkout -b feature/your-feature-name`
 3. Make your changes — try to match the existing code style (properties with setters, docstrings, type hints)
-4. Test it by building something small in `main.py` that uses the new feature
+4. Test it by building something small in `demos/` that uses the new feature
 5. Open a pull request with a short description of what you added and why
 
 No contribution is too small. Fixing a typo in a docstring, adding a missing type hint, or writing a better code example in this README are all welcome.
 
-You can run the unit tests of this repo by using the `python -m pytest unit_tests/ -v` command.
+You can run the unit tests of this repo by using the `python -m pytest unit_tests/ -v` command.  
 You can also write your own unit tests with pytest.
 
 If you are not sure where to start, open an issue describing what you want to build and we can figure it out together.
-
