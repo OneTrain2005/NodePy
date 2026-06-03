@@ -145,6 +145,12 @@ class Node:
             return self.get_child(item) is not None
         return False
 
+    def __bool__(self) -> bool:
+        # A node is always truthy regardless of child count.
+        # Without this, Python falls back to __len__ for truthiness,
+        # making empty nodes unexpectedly falsy.
+        return True
+
     def __iadd__(self, child: "Node") -> "Node":
         self.add_child(child)
         return self
@@ -242,22 +248,24 @@ class Node:
 
     def _call_process(self, delta: float) -> None:
         """Called once per rendered frame. Traverses the tree and calls _process (or _update for backward compat)."""
-        if not self.visible:
+        if not self.visible or self._queued_for_free:
             return
         if type(self)._process is not Node._process:
             self._process(delta)
         elif type(self)._update is not Node._update:
             self._update(delta)
-        for child in self.children:
+        # Iterate a copy so mutations during traversal don't skip siblings
+        for child in list(self.children):
             child._call_process(delta)
 
     def _call_physics_process(self, delta: float) -> None:
         """Called at fixed timestep. Traverses the tree and calls _physics_process."""
-        if not self.visible:
+        if not self.visible or self._queued_for_free:
             return
         if type(self)._physics_process is not Node._physics_process:
             self._physics_process(delta)
-        for child in self.children:
+        # Iterate a copy so mutations during traversal don't skip siblings
+        for child in list(self.children):
             child._call_physics_process(delta)
 
     def _render(self, canvas: tk.Canvas, cam: Matrix3x3) -> None:

@@ -64,7 +64,7 @@ class TextureManager:
         """
         self._cache: OrderedDict[_CacheKey, tk.PhotoImage] = OrderedDict()
         # Unbounded: one entry per (texture, w, h, filter) — PIL objects, GC-managed
-        self._resized: dict[_ResizeKey, Image.Image] = {}
+        self._resized: OrderedDict[_ResizeKey, Image.Image] = OrderedDict()
         self.max_size = max_size
         self.rot_step = rot_step
         self._steps: int = round(360.0 / rot_step)
@@ -173,14 +173,22 @@ class TextureManager:
         loss at typical sprite display sizes.
         """
         rkey: _ResizeKey = (texture.texture_id, w_px, h_px, filter_mode)
-        if rkey not in self._resized:
-            img = texture.image
-            # Skip PIL resize when source is already the right size — this is
-            # the common case when ImageTexture was loaded with native_size.
-            if img.width == w_px and img.height == h_px:
-                self._resized[rkey] = img
-            else:
-                self._resized[rkey] = img.resize((w_px, h_px), filter_mode)
+        if rkey in self._resized:
+            self._resized.move_to_end(rkey)
+            return self._resized[rkey]
+
+        img = texture.image
+        # Skip PIL resize when source is already the right size — this is
+        # the common case when ImageTexture was loaded with native_size.
+        if img.width == w_px and img.height == h_px:
+            self._resized[rkey] = img
+        else:
+            self._resized[rkey] = img.resize((w_px, h_px), filter_mode)
+
+        # Cap resized cache to prevent unbounded growth
+        while len(self._resized) > self.max_size * 2:
+            self._resized.popitem(last=False)
+
         return self._resized[rkey]
 
     def _bake(self, texture: "Texture2D",
@@ -201,5 +209,5 @@ class TextureManager:
         if rot_deg % 360.0 != 0.0:
             # PIL rotates counter-clockwise; negate to match the engine's
             # clockwise-positive convention.
-            out = out.rotate(-rot_deg, expand=True, resample=Image.BICUBIC)
+            out = out.rotate(-rot_deg, expand=True, resample=Image.BILINEAR)
         return ImageTk.PhotoImage(out)

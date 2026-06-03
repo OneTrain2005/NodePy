@@ -9,6 +9,7 @@ from typing import Optional, List
 import time
 import tkinter as tk
 import tkinter.ttk as ttk
+from collections import deque
 
 
 class GameLoop:
@@ -67,7 +68,7 @@ class GameLoop:
         self._last_time = time.perf_counter()
 
         # FPS display
-        self._fps_samples: List[float] = []
+        self._fps_samples: deque[float] = deque(maxlen=30)
         self._fps_label_id: Optional[int] = None
 
     def _on_resize(self, event: tk.Event) -> None:
@@ -118,17 +119,24 @@ class GameLoop:
         delta = now - self._last_time
         self._last_time = now
 
-        # Fixed-timestep physics + collision
+        # Fixed-timestep physics + collision (capped to prevent spiral of death)
+        MAX_PHYSICS_STEPS = 3
+        max_accum = self._physics_delta * MAX_PHYSICS_STEPS
+        if self._physics_accumulator > max_accum:
+            self._physics_accumulator = max_accum
+
         self._physics_accumulator += delta
-        while self._physics_accumulator >= self._physics_delta:
+        steps = 0
+        while self._physics_accumulator >= self._physics_delta and steps < MAX_PHYSICS_STEPS:
             if self._scene:
                 self._scene._call_physics_process(self._physics_delta)
             self._physics_step(self._physics_delta)
             self._physics_accumulator -= self._physics_delta
+            steps += 1
 
-        # Frame update (visual, variable delta)
+        # Frame update (visual, variable delta — clamped to avoid huge jumps)
         if self._scene:
-            self._scene._call_process(delta)
+            self._scene._call_process(min(delta, 0.1))
 
         # Process deferred calls
         Node._flush_deferred_calls()
@@ -152,8 +160,6 @@ class GameLoop:
         # FPS overlay — anchored to the top-right of the current canvas size
         if delta > 0:
             self._fps_samples.append(1.0 / delta)
-            if len(self._fps_samples) > 30:
-                self._fps_samples.pop(0)
         avg_fps = sum(self._fps_samples) / max(1, len(self._fps_samples))
         self.canvas.create_text(
             self.width - 6, 6,
