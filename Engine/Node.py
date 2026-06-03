@@ -235,6 +235,17 @@ class Node:
         gx, gy = self.global_matrix.multiply_vec(0, 0)
         return Vector2d(gx, gy)
 
+    def is_on_screen(self, cam: Matrix3x3, margin: float = 0) -> bool:
+        from Engine.Camera2D import Camera2D
+        active = Camera2D._active
+        if active is None:
+            return True
+        wx, wy = self.global_matrix.multiply_vec(0.0, 0.0)
+        sx, sy = cam.multiply_vec(wx, wy)
+        vw, vh = active.viewport_w, active.viewport_h
+        return not (sx + margin < 0 or sx - margin > vw or
+                    sy + margin < 0 or sy - margin > vh)
+
     # ── Lifecycle hooks (override in subclasses) ─────────────────────────────
 
     def _call_ready(self) -> None:

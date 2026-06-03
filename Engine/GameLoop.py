@@ -5,7 +5,7 @@ from Engine.Node import Node
 from Engine.Camera2D import Camera2D
 from Engine.Quadtree import SpatialHash
 from Engine.CollisionShape import CollisionShape
-from typing import Optional, List
+from typing import Optional, List, Callable
 import time
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -26,6 +26,20 @@ class GameLoop:
     loop.set_scene(my_root_node)
     loop.run()
     """
+
+    _pre_process_callbacks: List[Callable[[float], None]] = []
+
+    @classmethod
+    def register_pre_process(cls, callback: Callable[[float], None]) -> None:
+        if callback not in cls._pre_process_callbacks:
+            cls._pre_process_callbacks.append(callback)
+
+    @classmethod
+    def unregister_pre_process(cls, callback: Callable[[float], None]) -> None:
+        try:
+            cls._pre_process_callbacks.remove(callback)
+        except ValueError:
+            pass
 
     def __init__(self, width: int = 800, height: int = 600,
                  title: str = "PyEngine", bg: str = "#1a1a2e",
@@ -135,8 +149,11 @@ class GameLoop:
             steps += 1
 
         # Frame update (visual, variable delta — clamped to avoid huge jumps)
+        process_delta = min(delta, 0.1)
+        for cb in self._pre_process_callbacks:
+            cb(process_delta)
         if self._scene:
-            self._scene._call_process(min(delta, 0.1))
+            self._scene._call_process(process_delta)
 
         # Process deferred calls
         Node._flush_deferred_calls()
