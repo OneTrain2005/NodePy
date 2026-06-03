@@ -49,10 +49,19 @@ class CollisionShape(Node):
 
         self._overlapping: set["CollisionShape"] = set()
         self._cached_aabb: Optional[Tuple[float, float, float, float]] = None
-        CollisionShape._all.append(self)
 
-        # Remove from global registry when detached from the tree
+        # Register in global collision list when entering the tree,
+        # unregister when leaving.  Shapes created with a parent are
+        # already in the tree by the time __init__ finishes, so we
+        # append immediately in that case.
+        if self.parent is not None:
+            CollisionShape._all.append(self)
+        self.tree_entered.connect(self._on_tree_entered)
         self.tree_exited.connect(self._on_tree_exited)
+
+    def _on_tree_entered(self, node: "Node") -> None:
+        if self not in CollisionShape._all:
+            CollisionShape._all.append(self)
 
     def _on_tree_exited(self, node: "Node") -> None:
         if self in CollisionShape._all:
@@ -60,6 +69,10 @@ class CollisionShape(Node):
 
     def _ready(self) -> None:
         pass
+
+    def _on_invalidate(self) -> None:
+        # AABB is cached during spatial-hash rebuild; clear it when we move
+        self._cached_aabb = None
 
     def get_aabb(self) -> Tuple[float, float, float, float]:
         """

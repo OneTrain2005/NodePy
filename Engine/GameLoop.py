@@ -71,6 +71,7 @@ class GameLoop:
         # Wire Input to tkinter events
         self.root.bind("<KeyPress>", Input._on_key_press)
         self.root.bind("<KeyRelease>", Input._on_key_release)
+        self.root.bind("<FocusOut>", Input._on_focus_out)
         self.canvas.bind("<Motion>", Input._on_mouse_move)
         self.canvas.bind("<ButtonPress>", Input._on_mouse_press)
         self.canvas.bind("<ButtonRelease>", Input._on_mouse_release)
@@ -120,11 +121,9 @@ class GameLoop:
                 sh.insert(shape)
         CollisionShape._quadtree = sh
 
-        # Check collisions
+        # Check collisions for all visible shapes so _overlapping stays consistent
         for shape in CollisionShape._all:
             if not shape.visible or shape._queued_for_free:
-                continue
-            if not shape.body_entered._listeners and not shape.body_exited._listeners:
                 continue
             shape._check_collisions()
 
@@ -136,10 +135,10 @@ class GameLoop:
         # Fixed-timestep physics + collision (capped to prevent spiral of death)
         MAX_PHYSICS_STEPS = 3
         max_accum = self._physics_delta * MAX_PHYSICS_STEPS
-        if self._physics_accumulator > max_accum:
-            self._physics_accumulator = max_accum
 
         self._physics_accumulator += delta
+        if self._physics_accumulator > max_accum:
+            self._physics_accumulator = max_accum
         steps = 0
         while self._physics_accumulator >= self._physics_delta and steps < MAX_PHYSICS_STEPS:
             if self._scene:
@@ -174,7 +173,11 @@ class GameLoop:
             batch = list(Node._deferred_free_queue)
             Node._deferred_free_queue.clear()
             for node in batch:
-                node._perform_free()
+                try:
+                    node._perform_free()
+                except Exception:
+                    import traceback
+                    traceback.print_exc()
 
         # Input: flush per-frame state after all processing has seen it
         Input._flush()

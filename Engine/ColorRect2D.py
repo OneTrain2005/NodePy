@@ -56,16 +56,14 @@ class ColorRect2D(Node):
         if self.label:
             ox, oy = (cam * self.global_matrix).multiply_vec(0, 0)
             canvas.coords(self._canvas_ids[1], ox, oy)
+            canvas.itemconfig(self._canvas_ids[1], text=self.label)
         return True
 
     def _draw(self, canvas: tk.Canvas, cam: Matrix3x3) -> None:
         active = Camera2D._active
         if active is not None:
             vw, vh = active.viewport_w, active.viewport_h
-            ref = self.parent if self.parent is not None else self
-            wx, wy = ref.global_matrix.multiply_vec(
-                self._relative_pos.x, self._relative_pos.y
-            )
+            wx, wy = self.global_matrix.multiply_vec(0.0, 0.0)
             sx, sy = cam.multiply_vec(wx, wy)
             margin = (self.width + self.height) * active.zoom
             if sx + margin < 0 or sx - margin > vw or \

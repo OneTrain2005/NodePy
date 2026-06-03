@@ -103,7 +103,7 @@ def _get_coin_texture() -> ImageTexture:
         # Load pre-scaled to the display size so the 256×256 source is
         # discarded immediately — only a 24×24 RGBA image lives in memory.
         _coin_texture = ImageTexture.load(
-            "coin.png",
+            "coin.webp",
             native_size=_COIN_DISPLAY_SIZE,
             filter_mode=Image.BOX,
         )

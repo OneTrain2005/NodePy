@@ -26,11 +26,15 @@ class Signal:
             self._listeners.append(callback)
 
     def disconnect(self, callback: Callable) -> None:
-        self._listeners = [cb for cb in self._listeners if cb is not callback]
+        self._listeners = [cb for cb in self._listeners if cb != callback]
 
     def emit(self, *args, **kwargs) -> None:
         for cb in list(self._listeners):
-            cb(*args, **kwargs)
+            try:
+                cb(*args, **kwargs)
+            except Exception:
+                import traceback
+                traceback.print_exc()
 
     def __call__(self, *args, **kwargs) -> None:
         self.emit(*args, **kwargs)

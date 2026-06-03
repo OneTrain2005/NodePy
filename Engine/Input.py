@@ -75,6 +75,17 @@ class Input:
         cls._mouse_just_released.add(event.num)
 
     @classmethod
+    def _on_focus_out(cls, event: tk.Event) -> None:
+        """Clear all input state when the window loses focus.
+        Prevents keys getting stuck if the OS swallows KeyRelease events."""
+        cls._held.clear()
+        cls._just_pressed.clear()
+        cls._just_released.clear()
+        cls._mouse_held.clear()
+        cls._mouse_just_pressed.clear()
+        cls._mouse_just_released.clear()
+
+    @classmethod
     def _flush(cls) -> None:
         """Clear per-frame state.  Called at the START of each frame."""
         cls._just_pressed.clear()

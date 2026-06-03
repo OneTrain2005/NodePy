@@ -69,10 +69,7 @@ class Sprite2D(Node):
         active = Camera2D._active
         # Quick cull: if off-screen, let _render clear and skip
         if active is not None:
-            ref = self.parent if self.parent is not None else self
-            wx, wy = ref.global_matrix.multiply_vec(
-                self._relative_pos.x, self._relative_pos.y
-            )
+            wx, wy = self.global_matrix.multiply_vec(0.0, 0.0)
             sx, sy = cam.multiply_vec(wx, wy)
             vw, vh = active.viewport_w, active.viewport_h
             margin = (self.width + self.height) * active.zoom
@@ -110,10 +107,7 @@ class Sprite2D(Node):
         active = Camera2D._active
 
         # ── Pre-cull (cheap) ─────────────────────────────────────────────────
-        ref = self.parent if self.parent is not None else self
-        wx, wy = ref.global_matrix.multiply_vec(
-            self._relative_pos.x, self._relative_pos.y
-        )
+        wx, wy = self.global_matrix.multiply_vec(0.0, 0.0)
         sx, sy = cam.multiply_vec(wx, wy)
         if active is not None:
             vw, vh = active.viewport_w, active.viewport_h

@@ -55,6 +55,10 @@ class Node:
     # ── Tree management ──────────────────────────────────────────────────────
 
     def add_child(self, child: "Node") -> "Node":
+        if child._queued_for_free:
+            raise RuntimeError(
+                f"Cannot add node {child.name!r} to tree: it is queued for freeing"
+            )
         if child.parent is not None:
             child.parent.remove_child(child)
         child.parent = self
@@ -69,7 +73,7 @@ class Node:
         if child in self.children:
             self.children.remove(child)
             child.parent = None
-            child.tree_exited.emit(child)
+            child._propagate_tree_exited()
 
     def call_deferred(self, method_name: str, *args: Any, **kwargs: Any) -> None:
         """Queue a method call to run at the end of the current frame."""
@@ -77,12 +81,15 @@ class Node:
 
     @classmethod
     def _flush_deferred_calls(cls) -> None:
-        """Execute all queued deferred calls."""
+        """Execute all queued deferred calls.
+        Skips nodes that have been queued for freeing (matches Godot behaviour)."""
         if not cls._deferred_call_queue:
             return
         batch = list(cls._deferred_call_queue)
         cls._deferred_call_queue.clear()
         for node, method_name, args, kwargs in batch:
+            if node._queued_for_free:
+                continue
             try:
                 method = getattr(node, method_name)
                 method(*args, **kwargs)
@@ -104,6 +111,14 @@ class Node:
                 child._queued_for_free = True
                 child._propagate_queued_for_free()
 
+    def _propagate_tree_exited(self) -> None:
+        """Emit tree_exited bottom-up on self and all descendants.
+        Also clears canvas items so nothing stays stuck on screen."""
+        for c in list(self.children):
+            c._propagate_tree_exited()
+        self.tree_exited.emit(self)
+        self._clear_canvas_items()
+
     def _perform_free(self) -> None:
         """Actually remove this node and its descendants from the tree."""
         if not self._queued_for_free:
@@ -113,7 +128,9 @@ class Node:
             child._queued_for_free = True
             child._perform_free()
         if self.parent is not None:
-            self.parent.remove_child(self)
+            self.parent.children.remove(self)
+            self.parent = None
+        self._propagate_tree_exited()
 
     def get_child(self, name: str) -> Optional["Node"]:
         for c in self.children:
@@ -195,8 +212,14 @@ class Node:
         if self._dirty:
             return
         self._dirty = True
+        self._on_invalidate()
         for child in self.children:
             child.invalidate()
+
+    def _on_invalidate(self) -> None:
+        """Hook for subclasses to react to transform changes.
+        Called whenever relative_pos, rotation, or scale changes."""
+        pass
 
     def update_transform(self) -> None:
         if not self._dirty:
@@ -292,20 +315,28 @@ class Node:
         for child in self.children:
             child._call_physics_process(delta)
 
-    def _clear_canvas_items(self, canvas: tk.Canvas) -> None:
-        if self._canvas_ids:
-            canvas.delete(*self._canvas_ids)
+    def _clear_canvas_items(self, canvas: tk.Canvas | None = None) -> None:
+        target = canvas or getattr(self, '_canvas', None)
+        if self._canvas_ids and target is not None:
+            try:
+                target.delete(*self._canvas_ids)
+            except tk.TclError:
+                # Canvas was destroyed or item IDs became invalid
+                pass
             self._canvas_ids.clear()
 
     def _render(self, canvas: tk.Canvas, cam: Matrix3x3) -> None:
+        self._canvas = canvas
         if not self.visible or self._queued_for_free:
             self._clear_canvas_items(canvas)
+            for child in self.children:
+                child._render(canvas, cam)
             return
         # Try in-place update for retained rendering; fall back to clear+redraw
         if not self._update_draw(canvas, cam):
             self._clear_canvas_items(canvas)
             self._draw(canvas, cam)
-        for child in list(self.children):
+        for child in self.children:
             child._render(canvas, cam)
 
     def _update_draw(self, canvas: tk.Canvas, cam: Matrix3x3) -> bool:
