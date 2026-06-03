@@ -35,6 +35,7 @@ class Node:
         self._dirty = True
         self._ready_called = False
         self._queued_for_free = False
+        self._canvas_ids: List[int] = []
 
         # Built-in signals
         self.tree_entered = Signal("tree_entered")
@@ -210,6 +211,20 @@ class Node:
             self._global_matrix = local
         self._dirty = False
 
+    def _update_transform_tree(self) -> None:
+        """One-shot top-down transform recalculation. Called by GameLoop before rendering."""
+        if self._dirty:
+            local = Matrix3x3.make_transform(
+                self._relative_pos, self._rotation, self._scale
+            )
+            if self.parent is not None:
+                self._global_matrix = self.parent._global_matrix * local
+            else:
+                self._global_matrix = local
+            self._dirty = False
+        for child in self.children:
+            child._update_transform_tree()
+
     @property
     def global_matrix(self) -> Matrix3x3:
         self.update_transform()
@@ -254,8 +269,7 @@ class Node:
             self._process(delta)
         elif type(self)._update is not Node._update:
             self._update(delta)
-        # Iterate a copy so mutations during traversal don't skip siblings
-        for child in list(self.children):
+        for child in self.children:
             child._call_process(delta)
 
     def _call_physics_process(self, delta: float) -> None:
@@ -264,13 +278,29 @@ class Node:
             return
         if type(self)._physics_process is not Node._physics_process:
             self._physics_process(delta)
-        # Iterate a copy so mutations during traversal don't skip siblings
-        for child in list(self.children):
+        for child in self.children:
             child._call_physics_process(delta)
 
+    def _clear_canvas_items(self, canvas: tk.Canvas) -> None:
+        if self._canvas_ids:
+            canvas.delete(*self._canvas_ids)
+            self._canvas_ids.clear()
+
     def _render(self, canvas: tk.Canvas, cam: Matrix3x3) -> None:
-        if not self.visible:
+        if not self.visible or self._queued_for_free:
+            self._clear_canvas_items(canvas)
             return
-        self._draw(canvas, cam)
-        for child in self.children:
+        # Try in-place update for retained rendering; fall back to clear+redraw
+        if not self._update_draw(canvas, cam):
+            self._clear_canvas_items(canvas)
+            self._draw(canvas, cam)
+        for child in list(self.children):
             child._render(canvas, cam)
+
+    def _update_draw(self, canvas: tk.Canvas, cam: Matrix3x3) -> bool:
+        """Override to update existing canvas items in place.
+        Return True if items were successfully updated without full redraw."""
+        return False
+
+    def _draw(self, canvas: tk.Canvas, cam: Matrix3x3) -> None:
+        """Override: called every frame for custom drawing."""

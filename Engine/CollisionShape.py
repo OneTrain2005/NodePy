@@ -34,7 +34,7 @@ class CollisionShape(Node):
 
     # Class-level registry so shapes can find each other
     _all: List["CollisionShape"] = []
-    # Current quadtree — rebuilt by GameLoop at the start of each frame
+    # Current spatial hash — rebuilt by GameLoop during each physics step
     _quadtree = None
 
     def __init__(self, name: str, width: float = 20, height: float = 20,
@@ -140,5 +140,7 @@ class CollisionShape(Node):
                (pts[1] > vh and pts[3] > vh and pts[5] > vh and pts[7] > vh):
                 return
 
-        canvas.create_polygon(pts, fill="", outline="#00ff88",
-                              width=1, dash=(4, 3))
+        self._canvas_ids.append(
+            canvas.create_polygon(pts, fill="", outline="#00ff88",
+                                  width=1, dash=(4, 3))
+        )

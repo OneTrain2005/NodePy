@@ -8,11 +8,19 @@ class HUD(Node):
         self.lives = 3
         self.show_go = False
     def _draw(self, canvas, cam):
-        canvas.create_text(14, 14, anchor="nw", text=f"SCORE: {self.score}", fill="white", font=("Courier", 16, "bold"))
-        canvas.create_text(14, 38, anchor="nw", text=f"LIVES: {self.lives}", fill="white", font=("Courier", 14))
+        self._canvas_ids.append(
+            canvas.create_text(14, 14, anchor="nw", text=f"SCORE: {self.score}", fill="white", font=("Courier", 16, "bold"))
+        )
+        self._canvas_ids.append(
+            canvas.create_text(14, 38, anchor="nw", text=f"LIVES: {self.lives}", fill="white", font=("Courier", 14))
+        )
         if self.show_go:
             c = Camera2D._active
             if c:
                 cx, cy = c.viewport_w // 2, c.viewport_h // 2
-                canvas.create_text(cx, cy - 20, text="GAME OVER", fill="red", font=("Courier", 32, "bold"), anchor="center")
-                canvas.create_text(cx, cy + 20, text="Press ENTER to restart", fill="#aaaaaa", font=("Courier", 14), anchor="center")
+                self._canvas_ids.append(
+                    canvas.create_text(cx, cy - 20, text="GAME OVER", fill="red", font=("Courier", 32, "bold"), anchor="center")
+                )
+                self._canvas_ids.append(
+                    canvas.create_text(cx, cy + 20, text="Press ENTER to restart", fill="#aaaaaa", font=("Courier", 14), anchor="center")
+                )

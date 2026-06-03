@@ -160,21 +160,25 @@ class HUD(Node):
         import tkinter as tk
 
         # Ignore camera — draw directly in screen coords
-        canvas.create_text(
-            14,
-            14,
-            anchor="nw",
-            text=f"Coins: {self._score}",
-            fill="white",
-            font=("Helvetica", 14, "bold"),
+        self._canvas_ids.append(
+            canvas.create_text(
+                14,
+                14,
+                anchor="nw",
+                text=f"Coins: {self._score}",
+                fill="white",
+                font=("Helvetica", 14, "bold"),
+            )
         )
-        canvas.create_text(
-            14,
-            36,
-            anchor="nw",
-            text="WASD / arrows to move",
-            fill="#aaaaaa",
-            font=("Helvetica", 10),
+        self._canvas_ids.append(
+            canvas.create_text(
+                14,
+                36,
+                anchor="nw",
+                text="WASD / arrows to move",
+                fill="#aaaaaa",
+                font=("Helvetica", 10),
+            )
         )
 
 
@@ -272,8 +276,10 @@ class _GridBackground(Node):
         for wx in range(-self.half_w, self.half_w + 1, s):
             for wy in range(-self.half_h, self.half_h + 1, s):
                 sx, sy = cam.multiply_vec(wx, wy)
-                canvas.create_oval(
-                    sx - 1, sy - 1, sx + 1, sy + 1, fill="#2a2a4a", outline=""
+                self._canvas_ids.append(
+                    canvas.create_oval(
+                        sx - 1, sy - 1, sx + 1, sy + 1, fill="#2a2a4a", outline=""
+                    )
                 )
 
 

@@ -37,12 +37,31 @@ class ColorRect2D(Node):
         self.outline = outline
         self.label   = label
 
+    def _compute_pts(self, cam: Matrix3x3) -> list[float]:
+        mat = cam * self.global_matrix
+        hw, hh = self.width / 2, self.height / 2
+        corners = [(-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)]
+        pts = []
+        for px, py in corners:
+            sx, sy = mat.multiply_vec(px, py)
+            pts.extend([sx, sy])
+        return pts
+
+    def _update_draw(self, canvas: tk.Canvas, cam: Matrix3x3) -> bool:
+        if len(self._canvas_ids) != (2 if self.label else 1):
+            return False
+        pts = self._compute_pts(cam)
+        # Update polygon coords in place
+        canvas.coords(self._canvas_ids[0], *pts)
+        if self.label:
+            ox, oy = (cam * self.global_matrix).multiply_vec(0, 0)
+            canvas.coords(self._canvas_ids[1], ox, oy)
+        return True
+
     def _draw(self, canvas: tk.Canvas, cam: Matrix3x3) -> None:
         active = Camera2D._active
         if active is not None:
             vw, vh = active.viewport_w, active.viewport_h
-            # Pre-cull: project centre via parent's cached matrix — avoids
-            # recomputing the dirty local matrix for off-screen rects.
             ref = self.parent if self.parent is not None else self
             wx, wy = ref.global_matrix.multiply_vec(
                 self._relative_pos.x, self._relative_pos.y
@@ -53,15 +72,9 @@ class ColorRect2D(Node):
                sy + margin < 0 or sy - margin > vh:
                 return
 
-        mat = cam * self.global_matrix
-        hw, hh = self.width / 2, self.height / 2
-        corners = [(-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)]
-        pts = []
-        for px, py in corners:
-            sx, sy = mat.multiply_vec(px, py)
-            pts.extend([sx, sy])
+        pts = self._compute_pts(cam)
 
-        # Exact cull — catches anything the margin pre-cull passed through
+        # Exact cull
         if active is not None:
             if (pts[0] < 0 and pts[2] < 0 and pts[4] < 0 and pts[6] < 0) or \
                (pts[0] > vw and pts[2] > vw and pts[4] > vw and pts[6] > vw) or \
@@ -69,9 +82,13 @@ class ColorRect2D(Node):
                (pts[1] > vh and pts[3] > vh and pts[5] > vh and pts[7] > vh):
                 return
 
-        canvas.create_polygon(pts, fill=self.color,
-                              outline=self.outline, width=1)
+        self._canvas_ids.append(
+            canvas.create_polygon(pts, fill=self.color,
+                                  outline=self.outline, width=1)
+        )
         if self.label:
-            ox, oy = mat.multiply_vec(0, 0)
-            canvas.create_text(ox, oy, text=self.label,
-                               fill="white", font=("Helvetica", 8))
+            ox, oy = (cam * self.global_matrix).multiply_vec(0, 0)
+            self._canvas_ids.append(
+                canvas.create_text(ox, oy, text=self.label,
+                                   fill="white", font=("Helvetica", 8))
+            )

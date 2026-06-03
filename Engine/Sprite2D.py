@@ -50,21 +50,73 @@ class Sprite2D(Node):
         self.height      = float(height if height is not None else texture.height)
         self.filter_mode = filter_mode
 
-    def _draw(self, canvas: tk.Canvas, cam: Matrix3x3) -> None:
-        active = Camera2D._active
+    def _ready(self) -> None:
+        # Pre-warm all rotation frames at natural size so no mid-frame baking.
+        # Guarded: if tkinter has no root yet (e.g. node created before GameLoop),
+        # baking is deferred to the first draw.
+        import tkinter as _tk
+        if _tk._default_root is None:
+            return
+        w = max(1, round(self.width))
+        h = max(1, round(self.height))
+        TextureManager.instance().prewarm(
+            self.texture, w, h, self.filter_mode
+        )
 
-        # ── Pre-cull (cheap) ─────────────────────────────────────────────────
-        # Project the sprite centre via the parent's already-cached global
-        # matrix.  This avoids recomputing the dirty local matrix for off-screen
-        # sprites — the dominant cost before culling was introduced.
+    def _update_draw(self, canvas: tk.Canvas, cam: Matrix3x3) -> bool:
+        if len(self._canvas_ids) != 1:
+            return False
+        active = Camera2D._active
+        # Quick cull: if off-screen, let _render clear and skip
         if active is not None:
-            vw, vh = active.viewport_w, active.viewport_h
             ref = self.parent if self.parent is not None else self
             wx, wy = ref.global_matrix.multiply_vec(
                 self._relative_pos.x, self._relative_pos.y
             )
             sx, sy = cam.multiply_vec(wx, wy)
-            # Margin covers the worst-case rotated bounding circle of the sprite.
+            vw, vh = active.viewport_w, active.viewport_h
+            margin = (self.width + self.height) * active.zoom
+            if sx + margin < 0 or sx - margin > vw or \
+               sy + margin < 0 or sy - margin > vh:
+                return False
+
+        mat = cam * self.global_matrix
+        tx, ty, rot_deg, scale_x, scale_y = mat.decompose()
+        w_px = max(1, round(self.width  * scale_x))
+        h_px = max(1, round(self.height * scale_y))
+
+        if active is not None:
+            r = (w_px + h_px) / 2
+            if tx + r < 0 or tx - r > vw or ty + r < 0 or ty - r > vh:
+                return False
+
+        photo = TextureManager.instance().get(
+            self.texture, rot_deg, w_px, h_px, self.filter_mode
+        )
+        # If photo or dimensions changed, reconfig; otherwise just move
+        if (photo is getattr(self, '_last_photo', None) and
+                w_px == getattr(self, '_last_w_px', 0) and
+                h_px == getattr(self, '_last_h_px', 0)):
+            canvas.coords(self._canvas_ids[0], tx, ty)
+        else:
+            self._last_photo = photo
+            self._last_w_px = w_px
+            self._last_h_px = h_px
+            canvas.itemconfig(self._canvas_ids[0], image=photo)
+            canvas.coords(self._canvas_ids[0], tx, ty)
+        return True
+
+    def _draw(self, canvas: tk.Canvas, cam: Matrix3x3) -> None:
+        active = Camera2D._active
+
+        # ── Pre-cull (cheap) ─────────────────────────────────────────────────
+        ref = self.parent if self.parent is not None else self
+        wx, wy = ref.global_matrix.multiply_vec(
+            self._relative_pos.x, self._relative_pos.y
+        )
+        sx, sy = cam.multiply_vec(wx, wy)
+        if active is not None:
+            vw, vh = active.viewport_w, active.viewport_h
             margin = (self.width + self.height) * active.zoom
             if sx + margin < 0 or sx - margin > vw or \
                sy + margin < 0 or sy - margin > vh:
@@ -74,14 +126,10 @@ class Sprite2D(Node):
         mat = cam * self.global_matrix
         tx, ty, rot_deg, scale_x, scale_y = mat.decompose()
 
-        # Pixel dimensions at the current scale / zoom.  Integer rounding acts
-        # as implicit scale quantisation (no sub-pixel cache misses).
         w_px = max(1, round(self.width  * scale_x))
         h_px = max(1, round(self.height * scale_y))
 
         # ── Exact screen-rect cull ───────────────────────────────────────────
-        # After expand=True rotation the baked image is at most
-        # hypot(w,h) wide/tall.  We use (w+h)/2 as a conservative radius.
         if active is not None:
             r = (w_px + h_px) / 2
             if tx + r < 0 or tx - r > vw or ty + r < 0 or ty - r > vh:
@@ -91,4 +139,9 @@ class Sprite2D(Node):
         photo = TextureManager.instance().get(
             self.texture, rot_deg, w_px, h_px, self.filter_mode
         )
-        canvas.create_image(tx, ty, image=photo, anchor="center")
+        self._last_photo = photo
+        self._last_w_px = w_px
+        self._last_h_px = h_px
+        self._canvas_ids.append(
+            canvas.create_image(tx, ty, image=photo, anchor="center")
+        )

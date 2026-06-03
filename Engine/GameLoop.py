@@ -3,7 +3,7 @@ from Engine.Input import Input
 from Engine.Matrix3x3 import Matrix3x3
 from Engine.Node import Node
 from Engine.Camera2D import Camera2D
-from Engine.Quadtree import Quadtree
+from Engine.Quadtree import SpatialHash
 from Engine.CollisionShape import CollisionShape
 from typing import Optional, List
 import time
@@ -98,13 +98,13 @@ class GameLoop:
         return Matrix3x3()
 
     def _physics_step(self, delta: float) -> None:
-        """Rebuild quadtree with fresh positions and run collision detection."""
-        # Rebuild quadtree from all active collision shapes
-        qt = Quadtree(bounds=(-4000, -4000, 4000, 4000))
+        """Rebuild spatial hash with fresh positions and run collision detection."""
+        # Rebuild spatial hash from all active collision shapes
+        sh = SpatialHash(cell_size=100.0)
         for shape in CollisionShape._all:
             if shape.visible and not shape._queued_for_free:
-                qt.insert(shape)
-        CollisionShape._quadtree = qt
+                sh.insert(shape)
+        CollisionShape._quadtree = sh
 
         # Check collisions
         for shape in CollisionShape._all:
@@ -141,6 +141,17 @@ class GameLoop:
         # Process deferred calls
         Node._flush_deferred_calls()
 
+        # Clean up canvas items for queued nodes (and their descendants) before they are freed
+        def _clear_node_canvas_ids(node: Node) -> None:
+            if node._canvas_ids:
+                self.canvas.delete(*node._canvas_ids)
+                node._canvas_ids.clear()
+            for child in node.children:
+                _clear_node_canvas_ids(child)
+
+        for node in Node._deferred_free_queue:
+            _clear_node_canvas_ids(node)
+
         # Process deferred frees
         if Node._deferred_free_queue:
             batch = list(Node._deferred_free_queue)
@@ -152,21 +163,24 @@ class GameLoop:
         Input._flush()
 
         # Render
-        self.canvas.delete("all")
         view = self._get_view_matrix()
         if self._scene:
+            self._scene._update_transform_tree()
             self._scene._render(self.canvas, view)
 
         # FPS overlay — anchored to the top-right of the current canvas size
         if delta > 0:
             self._fps_samples.append(1.0 / delta)
         avg_fps = sum(self._fps_samples) / max(1, len(self._fps_samples))
-        self.canvas.create_text(
-            self.width - 6, 6,
-            text=f"{avg_fps:.0f} fps",
-            anchor="ne", fill="#888888",
-            font=("Helvetica", 9),
-        )
+        if self._fps_label_id is None:
+            self._fps_label_id = self.canvas.create_text(
+                self.width - 6, 6,
+                text="",
+                anchor="ne", fill="#888888",
+                font=("Helvetica", 9),
+            )
+        self.canvas.coords(self._fps_label_id, self.width - 6, 6)
+        self.canvas.itemconfig(self._fps_label_id, text=f"{avg_fps:.0f} fps")
 
         # Schedule next frame
         elapsed_ms = int((time.perf_counter() - now) * 1000)
