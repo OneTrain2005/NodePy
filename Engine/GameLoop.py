@@ -28,11 +28,14 @@ class GameLoop:
 
     def __init__(self, width: int = 800, height: int = 600,
                  title: str = "PyEngine", bg: str = "#1a1a2e",
-                 target_fps: int = 60):
+                 target_fps: int = 60, physics_fps: int = 60):
         self._requested_width = width
         self._requested_height = height
         self.target_fps = target_fps
         self._frame_ms = 1000 // target_fps
+
+        self._physics_delta = 1.0 / physics_fps
+        self._physics_accumulator = 0.0
 
         self.root = tk.Tk()
         self.root.title(title)
@@ -93,24 +96,42 @@ class GameLoop:
         # Default: identity (world origin = top-left corner)
         return Matrix3x3()
 
+    def _physics_step(self, delta: float) -> None:
+        """Rebuild quadtree with fresh positions and run collision detection."""
+        # Rebuild quadtree from all active collision shapes
+        qt = Quadtree(bounds=(-4000, -4000, 4000, 4000))
+        for shape in CollisionShape._all:
+            if shape.visible and not shape._queued_for_free:
+                qt.insert(shape)
+        CollisionShape._quadtree = qt
+
+        # Check collisions
+        for shape in CollisionShape._all:
+            if not shape.visible or shape._queued_for_free:
+                continue
+            if not shape.body_entered._listeners and not shape.body_exited._listeners:
+                continue
+            shape._check_collisions()
+
     def _tick(self) -> None:
         now = time.perf_counter()
         delta = now - self._last_time
         self._last_time = now
 
-        # Input: flush per-frame state before any _update sees it
-        Input._flush()
+        # Fixed-timestep physics + collision
+        self._physics_accumulator += delta
+        while self._physics_accumulator >= self._physics_delta:
+            if self._scene:
+                self._scene._call_physics_process(self._physics_delta)
+            self._physics_step(self._physics_delta)
+            self._physics_accumulator -= self._physics_delta
 
-        # Rebuild quadtree from all active collision shapes
-        qt = Quadtree(bounds=(-4000, -4000, 4000, 4000))
-        for shape in CollisionShape._all:
-            if shape.visible:
-                qt.insert(shape)
-        CollisionShape._quadtree = qt
-
-        # Update scene tree
+        # Frame update (visual, variable delta)
         if self._scene:
-            self._scene._process(delta)
+            self._scene._call_process(delta)
+
+        # Process deferred calls
+        Node._flush_deferred_calls()
 
         # Process deferred frees
         if Node._deferred_free_queue:
@@ -118,6 +139,9 @@ class GameLoop:
             Node._deferred_free_queue.clear()
             for node in batch:
                 node._perform_free()
+
+        # Input: flush per-frame state after all processing has seen it
+        Input._flush()
 
         # Render
         self.canvas.delete("all")

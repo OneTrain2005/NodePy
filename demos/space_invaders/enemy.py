@@ -36,7 +36,7 @@ class EnemyFormation(Node):
                 e.relative_pos = Vector2d(ci * 50 - 175, ri * 38 - 60)
                 e.died += lambda enemy, e=e: self.enemy_died.emit(e)
                 self.add_child(e)
-    def _update(self, dt):
+    def _physics_process(self, dt):
         self.relative_pos += Vector2d(self.direction * self.speed * dt, 0)
         if not self.children: return
         left = min(c.global_position.x for c in self.children)

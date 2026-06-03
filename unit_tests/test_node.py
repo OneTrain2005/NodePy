@@ -238,46 +238,104 @@ class TestNodeReady:
 
 
 class TestNodeProcess:
-    def test_process_calls_update(self):
-        class UpdatingNode(Node):
+    def test_process_calls_process(self):
+        class ProcessingNode(Node):
             def __init__(self):
-                super().__init__("updater")
+                super().__init__("processor")
                 self.delta = None
 
-            def _update(self, delta):
+            def _process(self, delta):
                 self.delta = delta
 
-        n = UpdatingNode()
-        n._process(0.016)
+        n = ProcessingNode()
+        n._call_process(0.016)
         assert n.delta == pytest.approx(0.016)
 
     def test_process_skips_invisible(self):
-        class UpdatingNode(Node):
+        class ProcessingNode(Node):
             def __init__(self):
-                super().__init__("updater")
+                super().__init__("processor")
                 self.delta = None
 
-            def _update(self, delta):
+            def _process(self, delta):
                 self.delta = delta
 
-        n = UpdatingNode()
+        n = ProcessingNode()
         n.visible = False
-        n._process(0.016)
+        n._call_process(0.016)
         assert n.delta is None
 
     def test_process_propagates_to_children(self):
-        class UpdatingNode(Node):
+        class ProcessingNode(Node):
             def __init__(self):
-                super().__init__("updater")
+                super().__init__("processor")
+                self.delta = None
+
+            def _process(self, delta):
+                self.delta = delta
+
+        p = ProcessingNode()
+        c = ProcessingNode()
+        p.add_child(c)
+        p._call_process(0.016)
+        assert p.delta == pytest.approx(0.016)
+        assert c.delta == pytest.approx(0.016)
+
+    def test_process_backward_compat_calls_update(self):
+        class LegacyNode(Node):
+            def __init__(self):
+                super().__init__("legacy")
                 self.delta = None
 
             def _update(self, delta):
                 self.delta = delta
 
-        p = UpdatingNode()
-        c = UpdatingNode()
+        n = LegacyNode()
+        n._call_process(0.016)
+        assert n.delta == pytest.approx(0.016)
+
+
+class TestNodePhysicsProcess:
+    def test_physics_process_calls_physics_process(self):
+        class PhysicsNode(Node):
+            def __init__(self):
+                super().__init__("physics")
+                self.delta = None
+
+            def _physics_process(self, delta):
+                self.delta = delta
+
+        n = PhysicsNode()
+        n._call_physics_process(0.016)
+        assert n.delta == pytest.approx(0.016)
+
+    def test_physics_process_skips_invisible(self):
+        class PhysicsNode(Node):
+            def __init__(self):
+                super().__init__("physics")
+                self.delta = None
+
+            def _physics_process(self, delta):
+                self.delta = delta
+
+        n = PhysicsNode()
+        n.visible = False
+        n._call_physics_process(0.016)
+        assert n.delta is None
+
+    def test_physics_process_propagates_to_children(self):
+        class PhysicsNode(Node):
+            def __init__(self):
+                super().__init__("physics")
+                self.delta = None
+
+            def _physics_process(self, delta):
+                self.delta = delta
+
+        p = PhysicsNode()
+        c = PhysicsNode()
         p.add_child(c)
-        p._process(0.016)
+        p._call_physics_process(0.016)
         assert p.delta == pytest.approx(0.016)
         assert c.delta == pytest.approx(0.016)
 
@@ -363,6 +421,75 @@ class TestNodeContainerSugar:
         c = Node("c", parent=p)
         result = p.__isub__(c)
         assert result is p
+
+
+class TestNodeCallDeferred:
+    def setup_method(self):
+        Node._deferred_call_queue.clear()
+
+    def test_call_deferred_queues_call(self):
+        class TargetNode(Node):
+            def __init__(self):
+                super().__init__("target")
+                self.received = []
+
+            def my_method(self, a, b):
+                self.received.append((a, b))
+
+        n = TargetNode()
+        n.call_deferred("my_method", 1, 2)
+        assert len(Node._deferred_call_queue) == 1
+        Node._flush_deferred_calls()
+        assert n.received == [(1, 2)]
+
+    def test_call_deferred_with_kwargs(self):
+        class TargetNode(Node):
+            def __init__(self):
+                super().__init__("target")
+                self.received = []
+
+            def my_method(self, a, b=None):
+                self.received.append((a, b))
+
+        n = TargetNode()
+        n.call_deferred("my_method", 1, b=2)
+        Node._flush_deferred_calls()
+        assert n.received == [(1, 2)]
+
+    def test_call_deferred_multiple_calls(self):
+        class TargetNode(Node):
+            def __init__(self):
+                super().__init__("target")
+                self.count = 0
+
+            def inc(self):
+                self.count += 1
+
+        n = TargetNode()
+        n.call_deferred("inc")
+        n.call_deferred("inc")
+        Node._flush_deferred_calls()
+        assert n.count == 2
+
+    def test_call_deferred_missing_method_is_caught(self):
+        n = Node("n")
+        n.call_deferred("nonexistent")
+        # One bad call should not abort the queue; it is caught and logged
+        Node._flush_deferred_calls()  # should not raise
+
+    def test_call_deferred_queue_cleared_after_flush(self):
+        class TargetNode(Node):
+            def __init__(self):
+                super().__init__("target")
+                self.count = 0
+
+            def inc(self):
+                self.count += 1
+
+        n = TargetNode()
+        n.call_deferred("inc")
+        Node._flush_deferred_calls()
+        assert Node._deferred_call_queue == []
 
 
 class TestNodeQueueFree:

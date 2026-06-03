@@ -69,7 +69,7 @@ class Player(Node):
     def _ready(self) -> None:
         self.relative_pos = Vector2d(0, 0)
 
-    def _update(self, delta: float) -> None:
+    def _physics_process(self, delta: float) -> None:
         direction = Input.get_vector("move_left", "move_right", "move_up", "move_down")
         if direction.length() > 0:
             direction = direction.normalized()
@@ -130,7 +130,7 @@ class Coin(Node):
             "col", width=24, height=24, debug_draw=False, parent=self
         )
 
-    def _update(self, delta: float) -> None:
+    def _process(self, delta: float) -> None:
         self._spin += 120 * delta
         self.sprite.rotation = 45 + self._spin
 
@@ -190,7 +190,7 @@ class SmoothCamera(Camera2D):
         super().__init__("Camera2D", viewport_size=viewport_size, zoom=1.0)
         self.target = target
 
-    def _update(self, delta: float) -> None:
+    def _process(self, delta: float) -> None:
         tp = self.target.global_position
         cp = self.global_position
         # Exponential lerp
@@ -285,7 +285,7 @@ class DebugOverlay(Node):
         super().__init__("DebugOverlay")
         self.enabled = True
 
-    def _update(self, delta):
+    def _process(self, delta):
         # Toggle with a key press
         if Input.is_action_just_pressed("F1"):
             self.enabled = not self.enabled

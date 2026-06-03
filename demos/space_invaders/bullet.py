@@ -17,7 +17,7 @@ class Bullet(Node):
         self.col = CollisionShape("c", width=4, height=12, parent=self)
         self.col.body_entered += self._on_hit
         self.hit = Signal("hit")
-    def _update(self, dt):
+    def _physics_process(self, dt):
         self.relative_pos += Vector2d(0, self.dir * self.SPEED * dt)
         if abs(self.relative_pos.y) > 400: self.queue_free()
     def _on_hit(self, other):

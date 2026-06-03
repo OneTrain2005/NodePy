@@ -19,7 +19,7 @@ class Player(Node):
         self.shot = Signal("shot")
     def _ready(self):
         self.relative_pos = Vector2d(0, 250)
-    def _update(self, dt):
+    def _physics_process(self, dt):
         if not self.alive: return
         self.relative_pos += Vector2d(Input.get_axis("move_left", "move_right") * self.SPEED * dt, 0)
         self.relative_pos = Vector2d(max(-370, min(370, self.relative_pos.x)), self.relative_pos.y)

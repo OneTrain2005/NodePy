@@ -15,7 +15,7 @@ class Mothership(Node):
         Sprite2D("s", texture=MOTH, width=96, height=42, filter_mode=0, parent=self)
         self.col = CollisionShape("c", width=96, height=42, parent=self)
         self.died = Signal("died")
-    def _update(self, dt):
+    def _physics_process(self, dt):
         self.relative_pos += Vector2d(self.dir * 100 * dt, 0)
         if abs(self.relative_pos.x) > 520: self.queue_free()
     def die(self):

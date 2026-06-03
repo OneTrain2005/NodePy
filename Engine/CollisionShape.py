@@ -92,25 +92,25 @@ class CollisionShape(Node):
             return self.contains_point(item)
         return False
 
-    def _update(self, delta: float) -> None:
-        # Skip entirely if nothing is listening — avoids quadtree queries for
-        # the majority of passive shapes (e.g. coin colliders with no handlers).
-        if not self.body_entered._listeners and not self.body_exited._listeners:
+    def _check_collisions(self) -> None:
+        """Check for overlaps and emit body_entered / body_exited.
+        Called by GameLoop during the physics step after the quadtree is rebuilt.
+        """
+        if self._queued_for_free:
             return
 
-        # Query the quadtree for nearby candidates instead of scanning _all.
-        # GameLoop rebuilds CollisionShape._quadtree once per frame before
-        # _process runs, so the tree is always fresh when we get here.
         qt = CollisionShape._quadtree
         if qt is not None:
             candidates = qt.query_shape(self)
         else:
             # Fallback: no quadtree built yet (first frame) — scan _all
             candidates = [s for s in CollisionShape._all
-                          if s is not self and s.visible]
+                          if s is not self and s.visible and not s._queued_for_free]
 
         current: set["CollisionShape"] = set()
         for other in candidates:
+            if other._queued_for_free:
+                continue
             if self.overlaps(other):
                 current.add(other)
                 if other not in self._overlapping:

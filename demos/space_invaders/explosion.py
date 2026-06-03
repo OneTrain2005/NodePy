@@ -8,6 +8,6 @@ class Explosion(Node):
         self.relative_pos = pos
         Sprite2D("s", texture=BOOM, width=52, height=32, filter_mode=0, parent=self)
         self._t = self.LIFE
-    def _update(self, dt):
+    def _process(self, dt):
         self._t -= dt
         if self._t <= 0: self.queue_free()

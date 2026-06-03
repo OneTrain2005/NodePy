@@ -20,7 +20,7 @@ class GameManager(Node):
         self._moth_t = random.uniform(12, 20)
         self.player = None
         self.formation = None
-    def _update(self, dt):
+    def _physics_process(self, dt):
         if self.state == "gameover":
             if Input.is_action_just_pressed("confirm"): self._restart()
             return

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, List, Optional, Tuple
 from Engine.Vector2d import Vector2d
 from Engine.Matrix3x3 import Matrix3x3
 from Engine.Signal import Signal
@@ -24,6 +24,7 @@ class Node:
     """
 
     _deferred_free_queue: List["Node"] = []
+    _deferred_call_queue: List[Tuple["Node", str, tuple, dict]] = []
 
     def __init__(self, name: str, relative_pos: Optional[Vector2d] = None,
                  parent: Optional["Node"] = None):
@@ -69,11 +70,38 @@ class Node:
             child.parent = None
             child.tree_exited.emit(child)
 
+    def call_deferred(self, method_name: str, *args: Any, **kwargs: Any) -> None:
+        """Queue a method call to run at the end of the current frame."""
+        Node._deferred_call_queue.append((self, method_name, args, kwargs))
+
+    @classmethod
+    def _flush_deferred_calls(cls) -> None:
+        """Execute all queued deferred calls."""
+        if not cls._deferred_call_queue:
+            return
+        batch = list(cls._deferred_call_queue)
+        cls._deferred_call_queue.clear()
+        for node, method_name, args, kwargs in batch:
+            try:
+                method = getattr(node, method_name)
+                method(*args, **kwargs)
+            except Exception:
+                import traceback
+                traceback.print_exc()
+
     def queue_free(self) -> None:
         """Queue this node (and all its children) for deletion at the end of the frame."""
         if not self._queued_for_free:
             self._queued_for_free = True
             Node._deferred_free_queue.append(self)
+            # Propagate to descendants so they can check their status before the frame ends
+            self._propagate_queued_for_free()
+
+    def _propagate_queued_for_free(self) -> None:
+        for child in self.children:
+            if not child._queued_for_free:
+                child._queued_for_free = True
+                child._propagate_queued_for_free()
 
     def _perform_free(self) -> None:
         """Actually remove this node and its descendants from the tree."""
@@ -198,20 +226,39 @@ class Node:
     def _ready(self) -> None:
         """Override: called once when node enters the active tree."""
 
+    def _process(self, delta: float) -> None:
+        """Override: called every frame with elapsed seconds. Use for visual updates, animation, and input response."""
+
+    def _physics_process(self, delta: float) -> None:
+        """Override: called at fixed timestep. Use for movement, collision, and physics logic."""
+
     def _update(self, delta: float) -> None:
-        """Override: called every frame with elapsed seconds."""
+        """Deprecated. Override _process or _physics_process instead."""
 
     def _draw(self, canvas: tk.Canvas, cam: Matrix3x3) -> None:
         """Override: called every frame for custom drawing."""
 
     # ── Internal frame dispatch ──────────────────────────────────────────────
 
-    def _process(self, delta: float) -> None:
+    def _call_process(self, delta: float) -> None:
+        """Called once per rendered frame. Traverses the tree and calls _process (or _update for backward compat)."""
         if not self.visible:
             return
-        self._update(delta)
+        if type(self)._process is not Node._process:
+            self._process(delta)
+        elif type(self)._update is not Node._update:
+            self._update(delta)
         for child in self.children:
-            child._process(delta)
+            child._call_process(delta)
+
+    def _call_physics_process(self, delta: float) -> None:
+        """Called at fixed timestep. Traverses the tree and calls _physics_process."""
+        if not self.visible:
+            return
+        if type(self)._physics_process is not Node._physics_process:
+            self._physics_process(delta)
+        for child in self.children:
+            child._call_physics_process(delta)
 
     def _render(self, canvas: tk.Canvas, cam: Matrix3x3) -> None:
         if not self.visible:
