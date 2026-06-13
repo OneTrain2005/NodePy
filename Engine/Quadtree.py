@@ -76,8 +76,11 @@ class SpatialHash:
                         sid = id(shape)
                         if sid not in seen:
                             seen.add(sid)
-                            # Narrow-phase AABB check to filter false positives
-                            sx0, sy0, sx1, sy1 = shape._cached_aabb
+                            # Narrow-phase AABB check to filter false positives.
+                            # _cached_aabb may be None if the shape moved since
+                            # the spatial hash was rebuilt (e.g. signal callback).
+                            aabb = shape._cached_aabb or shape.get_aabb()
+                            sx0, sy0, sx1, sy1 = aabb
                             if sx0 < x1 and sx1 > x0 and sy0 < y1 and sy1 > y0:
                                 result.append(shape)
         return result
