@@ -43,16 +43,22 @@ class Camera2D(Node):
             1. Translate world so camera position is at origin
             2. Apply zoom
             3. Translate origin to screen centre
+
+        Computed as the closed-form of T_scr * Z * T_neg, which gives:
+
+            | z   0   -z*gx + cx |
+            | 0   z   -z*gy + cy |
+            | 0   0       1      |
+
+        This avoids constructing three intermediate matrices and performing
+        two full 3×3 multiplications every frame.
         """
-        gpos = self.global_position
-        cx   = self.viewport_w / 2 + self.offset.x
-        cy   = self.viewport_h / 2 + self.offset.y
-
-        # Move world so camera pos → origin
-        T_neg = Matrix3x3.translation(Vector2d(-gpos.x, -gpos.y))
-        # Zoom
-        Z     = Matrix3x3.scaling(Vector2d(self.zoom, self.zoom))
-        # Move origin to screen centre
-        T_scr = Matrix3x3.translation(Vector2d(cx, cy))
-
-        return T_scr * Z * T_neg
+        gx, gy = self.global_matrix.multiply_vec(0.0, 0.0)
+        z  = self.zoom
+        cx = self.viewport_w / 2 + self.offset.x
+        cy = self.viewport_h / 2 + self.offset.y
+        return Matrix3x3([
+            [z,   0.0, -z * gx + cx],
+            [0.0, z,   -z * gy + cy],
+            [0.0, 0.0, 1.0         ],
+        ])

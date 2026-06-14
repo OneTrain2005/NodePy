@@ -26,11 +26,26 @@ class Signal:
             self._listeners.append(callback)
 
     def disconnect(self, callback: Callable) -> None:
-        self._listeners = [cb for cb in self._listeners if cb is not callback]
+        self._listeners = [cb for cb in self._listeners if cb != callback]
 
     def emit(self, *args, **kwargs) -> None:
         for cb in list(self._listeners):
-            cb(*args, **kwargs)
+            try:
+                cb(*args, **kwargs)
+            except Exception:
+                import traceback
+                traceback.print_exc()
+
+    def __call__(self, *args, **kwargs) -> None:
+        self.emit(*args, **kwargs)
+
+    def __iadd__(self, callback: Callable) -> "Signal":
+        self.connect(callback)
+        return self
+
+    def __isub__(self, callback: Callable) -> "Signal":
+        self.disconnect(callback)
+        return self
 
     def __repr__(self) -> str:
         return f"Signal({self.name!r}, {len(self._listeners)} listeners)"
