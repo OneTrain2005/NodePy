@@ -1,7 +1,7 @@
-from Engine.Node import Node
-from Engine.Sprite2D import Sprite2D
-from Engine.CollisionShape import CollisionShape
-from Engine.Vector2d import Vector2d
+from nodepy.Node import Node
+from nodepy.Sprite2D import Sprite2D
+from nodepy.CollisionShape import CollisionShape
+from nodepy.Vector2d import Vector2d
 from constants import SHIELD
 class Shield(Node):
     def __init__(self, pos):

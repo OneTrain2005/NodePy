@@ -1,5 +1,5 @@
 """
-Engine/Quadtree.py  (now a spatial hash)
+nodepy/Quadtree.py  (now a spatial hash)
 
 Spatial hashing divides the world into a uniform grid. Each shape is inserted
 into every grid cell its AABB overlaps. Queries collect all shapes in the
@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import Dict, List, Set, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from Engine.CollisionShape import CollisionShape
+    from nodepy.CollisionShape import CollisionShape
 
 AABB = Tuple[float, float, float, float]
 

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from typing import Any, List, Optional, Tuple
-from Engine.Vector2d import Vector2d
-from Engine.Matrix3x3 import Matrix3x3
-from Engine.Signal import Signal
+from nodepy.Vector2d import Vector2d
+from nodepy.Matrix3x3 import Matrix3x3
+from nodepy.Signal import Signal
 import tkinter as tk
 
 class Node:
@@ -259,7 +259,7 @@ class Node:
         return Vector2d(gx, gy)
 
     def is_on_screen(self, cam: Matrix3x3, margin: float = 0) -> bool:
-        from Engine.Camera2D import Camera2D
+        from nodepy.Camera2D import Camera2D
         active = Camera2D._active
         if active is None:
             return True

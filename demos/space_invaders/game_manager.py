@@ -1,7 +1,7 @@
 import random
-from Engine.Node import Node
-from Engine.Input import Input
-from Engine.Vector2d import Vector2d
+from nodepy.Node import Node
+from nodepy.Input import Input
+from nodepy.Vector2d import Vector2d
 from player import Player
 from enemy import Enemy, EnemyFormation
 from shield import Shield

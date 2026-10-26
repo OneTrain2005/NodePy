@@ -1,8 +1,8 @@
-"""Unit tests for Engine.Vector2d"""
+"""Unit tests for nodepy.Vector2d"""
 
 import math
 import pytest
-from Engine.Vector2d import Vector2d
+from nodepy.Vector2d import Vector2d
 
 
 class TestVector2dInit:

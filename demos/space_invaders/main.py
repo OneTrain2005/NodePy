@@ -7,12 +7,12 @@ It's a space invaders clone.
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from Engine.GameLoop import GameLoop
-from Engine.Camera2D import Camera2D
-from Engine.Input import Input
-from Engine.Node import Node
-from Engine.TextureManager import TextureManager
-from Engine.Vector2d import Vector2d
+from nodepy.GameLoop import GameLoop
+from nodepy.Camera2D import Camera2D
+from nodepy.Input import Input
+from nodepy.Node import Node
+from nodepy.TextureManager import TextureManager
+from nodepy.Vector2d import Vector2d
 from PIL import Image
 from constants import *
 from player import Player

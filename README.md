@@ -27,6 +27,7 @@ This README will walk you through **how to use** the engine and **how it works u
     - [Sprite2D](#sprite2d)
     - [CollisionShape](#collisionshape)
     - [Camera2D](#camera2d)
+  - [Plugins](#plugins)
   - [Known limitations](#known-limitations)
   - [Design patterns used](#design-patterns-used)
   - [Contributing](#contributing)
@@ -67,7 +68,8 @@ python3 demos/space_invaders/main.py
 
 ```
 .
-├── Engine
+├── nodepy
+│   ├── __init__.py         # Public API: everything exported here is stable
 │   ├── Camera2D.py         # Viewport camera with zoom and smooth follow
 │   ├── CollisionShape.py   # AABB hit detection + body_entered / body_exited
 │   ├── ColorRect2D.py      # Solid-colour rectangle in world space
@@ -75,12 +77,14 @@ python3 demos/space_invaders/main.py
 │   ├── Input.py            # Keyboard and mouse state, polled per frame
 │   ├── Matrix3x3.py        # Homogeneous 2D transform math (TRS)
 │   ├── Node.py             # Base class for every object in the scene
+│   ├── Plugin.py           # Base class for engine extensions (audio, ...)
 │   ├── Quadtree.py         # SpatialHash (flat grid) for broadphase collision
 │   ├── Signal.py           # Lightweight event system
 │   ├── Sprite2D.py         # Textured sprite with rotation, scale, and camera zoom
 │   ├── Texture2D.py        # PIL image wrapper + file loading cache
 │   ├── TextureManager.py   # LRU cache of baked PhotoImages (resize + rotate)
 │   └── Vector2d.py         # 2D vector with arithmetic helpers
+├── Engine/                 # Deprecated alias for nodepy (old imports keep working)
 ├── demos
 │   ├── coin_collector/     # WASD movement, camera follow, textured coins
 │   └── space_invaders/     # Full mini-game with sprites, shields, enemies
@@ -171,11 +175,11 @@ self.relative_pos = self.relative_pos + Vector2d(300 * delta, 0)
 
 ### Creating nodes
 
-Import what you need from the `Engine` package and subclass `Node`:
+Import what you need from the `nodepy` package and subclass `Node`:
 
 ```python
-from Engine.Node import Node
-from Engine.Vector2d import Vector2d
+from nodepy.Node import Node
+from nodepy.Vector2d import Vector2d
 
 class MyObject(Node):
     def __init__(self):
@@ -205,9 +209,9 @@ class MyObject(Node):
 Build a scene and hand it to the `GameLoop`:
 
 ```python
-from Engine.GameLoop import GameLoop
-from Engine.Node import Node
-from Engine.Vector2d import Vector2d
+from nodepy.GameLoop import GameLoop
+from nodepy.Node import Node
+from nodepy.Vector2d import Vector2d
 
 root = Node("Root")
 obj  = MyObject()
@@ -274,8 +278,8 @@ if "Player" in world:
 A `Signal` is a way for one node to tell other nodes that something happened, **without needing to know who is listening**. Think of it like a radio broadcast: the sender emits, anyone who tuned in receives.
 
 ```python
-from Engine.Node import Node
-from Engine.Signal import Signal
+from nodepy.Node import Node
+from nodepy.Signal import Signal
 
 class Door(Node):
     def __init__(self):
@@ -315,7 +319,7 @@ col.body_exited.connect(self._on_leave)  # it stopped overlapping
 `Input` is a class you query each frame — you never instantiate it. `GameLoop` feeds it keyboard and mouse events automatically. If the window loses focus, all held keys are cleared so they don't get stuck.
 
 ```python
-from Engine.Input import Input
+from nodepy.Input import Input
 
 def _physics_process(self, delta):
     # Held keys
@@ -367,8 +371,8 @@ if Input.mouse_just_released(1):
 `ColorRect2D` draws a solid-colour rectangle at the node's world position. It inherits the full transform pipeline, so it rotates, scales, and moves with its parent automatically.
 
 ```python
-from Engine.ColorRect2D import ColorRect2D
-from Engine.Vector2d import Vector2d
+from nodepy.ColorRect2D import ColorRect2D
+from nodepy.Vector2d import Vector2d
 
 class Player(Node):
     def __init__(self):
@@ -397,8 +401,8 @@ Because `ColorRect2D` is just a `Node`, you can nest them inside each other to b
 
 ```python
 from PIL import Image
-from Engine.Sprite2D import Sprite2D
-from Engine.Texture2D import ImageTexture
+from nodepy.Sprite2D import Sprite2D
+from nodepy.Texture2D import ImageTexture
 
 class Coin(Node):
     def __init__(self):
@@ -424,7 +428,7 @@ class Coin(Node):
 **Note:** — the recommended image format for NodePy is webp. You *can* use use any format but each will come with their drawbacks. For instance png will come with a significant toll on game performance. To convert images from a format to another you can use [outilsenligne.ca](https://www.outilsenligne.ca/) — *A completely free tool platform for Quebec students.*
 
 ```python
-from Engine.TextureManager import TextureManager
+from nodepy.TextureManager import TextureManager
 
 TextureManager.instance().prewarm(texture, w_px=24, h_px=24, filter_mode=Image.NEAREST)
 ```
@@ -434,7 +438,7 @@ TextureManager.instance().prewarm(texture, w_px=24, h_px=24, filter_mode=Image.N
 `CollisionShape` gives a node an **axis-aligned bounding box** (AABB) for hit detection. The box is automatically recalculated from the node's current global transform every time it is checked.
 
 ```python
-from Engine.CollisionShape import CollisionShape
+from nodepy.CollisionShape import CollisionShape
 
 class Enemy(Node):
     def __init__(self):
@@ -469,8 +473,8 @@ if self.col.contains_point(Input.mouse_position()):
 `Camera2D` moves the viewport so a world position stays centred on screen. Make one active and the `GameLoop` will use it automatically. The canvas now resizes with the window, and the camera viewport stays in sync.
 
 ```python
-from Engine.Camera2D import Camera2D
-from Engine.Vector2d import Vector2d
+from nodepy.Camera2D import Camera2D
+from nodepy.Vector2d import Vector2d
 
 camera = Camera2D(
     "Camera2D",
@@ -503,6 +507,64 @@ For HUD elements that should stay fixed on screen regardless of the camera, atta
 
 ---
 
+## Plugins
+
+The core engine stays small: standard library plus Pillow. Extra features that need other libraries, such as audio, ship as **separate packages** in their own repos and plug into the engine.
+
+Most extensions only need to add new node types. Those are plain packages that subclass `Node`:
+
+```python
+from nodepy import Node
+
+class AudioStreamPlayer(Node):
+    ...
+```
+
+Extensions that need an engine-wide service (something pumped every frame, or closed when the game exits) subclass `Plugin` and are registered explicitly on the `GameLoop`:
+
+```python
+from nodepy import GameLoop, Plugin
+
+class AudioServer(Plugin):
+    name = "audio"
+
+    def on_install(self, loop):      # loop.root and loop.canvas exist
+        self.mixer = open_device()
+
+    def on_pre_process(self, delta): # every frame, before the scene's _process
+        self.mixer.pump()
+
+    def on_post_physics(self, delta):  # after every fixed physics step
+        ...
+
+    def on_shutdown(self):           # when run() returns or the plugin is removed
+        self.mixer.close()
+
+loop = GameLoop()
+loop.add_plugin(AudioServer())
+loop.get_plugin("audio")             # look it up from anywhere you have the loop
+```
+
+All hooks are optional. If a hook raises, the error is printed and the game and other plugins keep running.
+
+### Writing a plugin package
+
+Name the package `nodepy-<feature>` on PyPI and `nodepy_<feature>` for imports. Pin the engine range you support:
+
+```toml
+[project]
+name = "nodepy-audio"
+dependencies = ["NodePy>=1.2,<2", "miniaudio"]
+```
+
+Import only what `nodepy/__init__.py` exports. Anything starting with `_` is internal and can change in a minor release.
+
+Users install plugins like any other package: `pip install nodepy-audio`, or `pip install git+https://github.com/<owner>/nodepy-audio` before it is published.
+
+> **Migrating from `Engine`:** the package was renamed from `Engine` to `nodepy`. Old imports such as `from Engine.Node import Node` still work but emit a `DeprecationWarning`. The alias will be removed in a future release.
+
+---
+
 ## Known limitations
 
 These are real constraints you should know about before building:
@@ -513,7 +575,7 @@ These are real constraints you should know about before building:
 | **No scene switching** | `GameLoop.set_scene()` overwrites `self._scene` without cleaning up the old scene's canvas items or texture cache. | Build one scene per `GameLoop` instance, or call `TextureManager.instance().clear()` between scenes. |
 | **Single camera only** | `Camera2D._active` is a class-level variable. Split-screen or multiple viewports are not supported. | Use a single camera; HUD nodes can ignore the camera matrix in `_draw`. |
 | **AABB collision only** | `CollisionShape` uses axis-aligned bounding boxes. There is no circle, polygon, or pixel-perfect collision. | Keep hitboxes slightly smaller than visuals; AABB is fast and good enough for most 2D games. |
-| **No built-in audio** | There is no `AudioNode` or sound manager. | Use the standard library `wave` module, or an external library like `pygame.mixer`. |
+| **No built-in audio** | There is no `AudioNode` or sound manager in the core. | Use an audio [plugin](#plugins), or wire up a library like `pygame.mixer` yourself. |
 | **tkinter single-threaded** | All engine logic runs on the main thread. Heavy work in `_process` will stall rendering. | Offload heavy work to `_ready` (prewarm textures), or use `call_deferred` to spread work across frames. |
 | **Signal strong references** | Connected listeners are stored as strong references. A temporary node connected to a long-lived signal will not be garbage-collected until explicitly disconnected. | Always `disconnect()` in `tree_exited` or `_ready` cleanup, or use `queue_free()` which triggers cleanup automatically. |
 

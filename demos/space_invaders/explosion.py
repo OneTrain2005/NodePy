@@ -1,5 +1,5 @@
-from Engine.Node import Node
-from Engine.Sprite2D import Sprite2D
+from nodepy.Node import Node
+from nodepy.Sprite2D import Sprite2D
 from constants import BOOM
 class Explosion(Node):
     LIFE = 0.25

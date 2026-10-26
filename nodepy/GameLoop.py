@@ -1,12 +1,14 @@
 from __future__ import annotations
-from Engine.Input import Input
-from Engine.Matrix3x3 import Matrix3x3
-from Engine.Node import Node
-from Engine.Camera2D import Camera2D
-from Engine.Quadtree import SpatialHash
-from Engine.CollisionShape import CollisionShape
+from nodepy.Input import Input
+from nodepy.Matrix3x3 import Matrix3x3
+from nodepy.Node import Node
+from nodepy.Camera2D import Camera2D
+from nodepy.Quadtree import SpatialHash
+from nodepy.CollisionShape import CollisionShape
+from nodepy.Plugin import Plugin
 from typing import Optional, List, Callable
 import time
+import traceback
 import tkinter as tk
 import tkinter.ttk as ttk
 from collections import deque
@@ -25,6 +27,9 @@ class GameLoop:
     loop = GameLoop(width=800, height=600, title="My Game")
     loop.set_scene(my_root_node)
     loop.run()
+
+    Plugins (see ``nodepy.Plugin``) are registered with ``add_plugin`` and
+    receive loop hooks until ``run`` returns or they are removed.
     """
 
     _pre_process_callbacks: List[Callable[[float], None]] = []
@@ -86,6 +91,48 @@ class GameLoop:
         self._fps_samples: deque[float] = deque(maxlen=30)
         self._fps_label_id: Optional[int] = None
 
+        self._plugins: List[Plugin] = []
+
+    # ── Plugins ──────────────────────────────────────────────────────────────
+
+    def add_plugin(self, plugin: Plugin) -> Plugin:
+        """Register *plugin*, call its ``on_install`` and return it."""
+        if any(p is plugin or p.name == plugin.name for p in self._plugins):
+            raise ValueError(f"A plugin named {plugin.name!r} is already installed")
+        self._plugins.append(plugin)
+        plugin.on_install(self)
+        return plugin
+
+    def remove_plugin(self, plugin: Plugin) -> None:
+        """Unregister *plugin* and call its ``on_shutdown``."""
+        try:
+            self._plugins.remove(plugin)
+        except ValueError:
+            return
+        plugin.on_shutdown()
+
+    def get_plugin(self, name: str) -> Optional[Plugin]:
+        for plugin in self._plugins:
+            if plugin.name == name:
+                return plugin
+        return None
+
+    def _call_plugins(self, hook: str, *args) -> None:
+        # A misbehaving plugin should not take the whole game down
+        for plugin in list(self._plugins):
+            try:
+                getattr(plugin, hook)(*args)
+            except Exception:
+                traceback.print_exc()
+
+    def _shutdown_plugins(self) -> None:
+        for plugin in reversed(self._plugins):
+            try:
+                plugin.on_shutdown()
+            except Exception:
+                traceback.print_exc()
+        self._plugins.clear()
+
     def _on_resize(self, event: tk.Event) -> None:
         """Update internal size and the active camera when the canvas changes."""
         new_w = event.width
@@ -144,6 +191,7 @@ class GameLoop:
             if self._scene:
                 self._scene._call_physics_process(self._physics_delta)
             self._physics_step(self._physics_delta)
+            self._call_plugins("on_post_physics", self._physics_delta)
             self._physics_accumulator -= self._physics_delta
             steps += 1
 
@@ -151,6 +199,7 @@ class GameLoop:
         process_delta = min(delta, 0.1)
         for cb in self._pre_process_callbacks:
             cb(process_delta)
+        self._call_plugins("on_pre_process", process_delta)
         if self._scene:
             self._scene._call_process(process_delta)
 
@@ -176,7 +225,6 @@ class GameLoop:
                 try:
                     node._perform_free()
                 except Exception:
-                    import traceback
                     traceback.print_exc()
 
         # Input: flush per-frame state after all processing has seen it
@@ -209,4 +257,7 @@ class GameLoop:
 
     def run(self) -> None:
         self.root.after(0, self._tick)
-        self.root.mainloop()
+        try:
+            self.root.mainloop()
+        finally:
+            self._shutdown_plugins()

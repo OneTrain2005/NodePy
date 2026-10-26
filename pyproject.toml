@@ -13,5 +13,9 @@ dependencies = [
     "Pillow",
 ]
 
+[tool.setuptools]
+# "Engine" is a deprecated alias for "nodepy", kept for existing games
+packages = ["nodepy", "Engine"]
+
 [project.urls]
 Homepage = "https://github.com/OneTrain2005/NodePy"

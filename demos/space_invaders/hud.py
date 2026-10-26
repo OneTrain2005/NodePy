@@ -1,6 +1,6 @@
 import tkinter as tk
-from Engine.Node import Node
-from Engine.Camera2D import Camera2D
+from nodepy.Node import Node
+from nodepy.Camera2D import Camera2D
 class HUD(Node):
     def __init__(self):
         super().__init__("HUD")

@@ -1,9 +1,9 @@
-"""Unit tests for Engine.Camera2D"""
+"""Unit tests for nodepy.Camera2D"""
 
 import pytest
-from Engine.Camera2D import Camera2D
-from Engine.Node import Node
-from Engine.Vector2d import Vector2d
+from nodepy.Camera2D import Camera2D
+from nodepy.Node import Node
+from nodepy.Vector2d import Vector2d
 
 
 class TestCamera2DInit:

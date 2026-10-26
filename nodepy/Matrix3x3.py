@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from typing import List, Optional, Tuple
 
-from Engine.Vector2d import Vector2d
+from nodepy.Vector2d import Vector2d
 
 
 class Matrix3x3:

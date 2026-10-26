@@ -1,9 +1,9 @@
 import random
-from Engine.Node import Node
-from Engine.Sprite2D import Sprite2D
-from Engine.CollisionShape import CollisionShape
-from Engine.Vector2d import Vector2d
-from Engine.Signal import Signal
+from nodepy.Node import Node
+from nodepy.Sprite2D import Sprite2D
+from nodepy.CollisionShape import CollisionShape
+from nodepy.Vector2d import Vector2d
+from nodepy.Signal import Signal
 from constants import MOTH
 class Mothership(Node):
     def __init__(self):

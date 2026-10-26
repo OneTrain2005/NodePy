@@ -1,11 +1,11 @@
-"""Unit tests for Engine.TextureManager"""
+"""Unit tests for nodepy.TextureManager"""
 
 import pytest
 from PIL import Image
 import tkinter as tk
 
-from Engine.TextureManager import TextureManager
-from Engine.Texture2D import Texture2D
+from nodepy.TextureManager import TextureManager
+from nodepy.Texture2D import Texture2D
 
 
 # TextureManager._bake creates ImageTk.PhotoImage which needs a tkinter root.

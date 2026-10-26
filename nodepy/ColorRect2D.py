@@ -4,9 +4,9 @@ from typing import Optional
 
 import tkinter as tk
 
-from Engine.Camera2D import Camera2D
-from Engine.Matrix3x3 import Matrix3x3
-from Engine.Node import Node
+from nodepy.Camera2D import Camera2D
+from nodepy.Matrix3x3 import Matrix3x3
+from nodepy.Node import Node
 
 
 class ColorRect2D(Node):
