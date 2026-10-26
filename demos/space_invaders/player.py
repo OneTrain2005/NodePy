@@ -1,9 +1,9 @@
-from Engine.Node import Node
-from Engine.Sprite2D import Sprite2D
-from Engine.CollisionShape import CollisionShape
-from Engine.Input import Input
-from Engine.Vector2d import Vector2d
-from Engine.Signal import Signal
+from nodepy.Node import Node
+from nodepy.Sprite2D import Sprite2D
+from nodepy.CollisionShape import CollisionShape
+from nodepy.Input import Input
+from nodepy.Vector2d import Vector2d
+from nodepy.Signal import Signal
 from constants import PLAYER
 class Player(Node):
     SPEED = 260

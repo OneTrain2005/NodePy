@@ -1,9 +1,9 @@
 from __future__ import annotations
-from Engine.Node import Node
-from Engine.Matrix3x3 import Matrix3x3
-from Engine.Vector2d import Vector2d
-from Engine.Signal import Signal
-from Engine.Camera2D import Camera2D
+from nodepy.Node import Node
+from nodepy.Matrix3x3 import Matrix3x3
+from nodepy.Vector2d import Vector2d
+from nodepy.Signal import Signal
+from nodepy.Camera2D import Camera2D
 from typing import Optional, Tuple, List
 import tkinter as tk
 

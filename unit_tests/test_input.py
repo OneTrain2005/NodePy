@@ -1,8 +1,8 @@
-"""Unit tests for Engine.Input"""
+"""Unit tests for nodepy.Input"""
 
 import pytest
-from Engine.Input import Input
-from Engine.Vector2d import Vector2d
+from nodepy.Input import Input
+from nodepy.Vector2d import Vector2d
 
 
 class TestInputActionMap:

@@ -1,9 +1,9 @@
-"""Unit tests for Engine.Matrix3x3"""
+"""Unit tests for nodepy.Matrix3x3"""
 
 import math
 import pytest
-from Engine.Matrix3x3 import Matrix3x3
-from Engine.Vector2d import Vector2d
+from nodepy.Matrix3x3 import Matrix3x3
+from nodepy.Vector2d import Vector2d
 
 
 class TestMatrix3x3Identity:

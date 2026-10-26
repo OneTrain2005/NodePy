@@ -5,11 +5,11 @@ from typing import Optional
 import tkinter as tk
 from PIL import Image
 
-from Engine.Camera2D import Camera2D
-from Engine.Matrix3x3 import Matrix3x3
-from Engine.Node import Node
-from Engine.Texture2D import Texture2D
-from Engine.TextureManager import TextureManager
+from nodepy.Camera2D import Camera2D
+from nodepy.Matrix3x3 import Matrix3x3
+from nodepy.Node import Node
+from nodepy.Texture2D import Texture2D
+from nodepy.TextureManager import TextureManager
 
 
 class Sprite2D(Node):

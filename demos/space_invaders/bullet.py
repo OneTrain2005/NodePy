@@ -1,8 +1,8 @@
-from Engine.Node import Node
-from Engine.ColorRect2D import ColorRect2D
-from Engine.CollisionShape import CollisionShape
-from Engine.Vector2d import Vector2d
-from Engine.Signal import Signal
+from nodepy.Node import Node
+from nodepy.ColorRect2D import ColorRect2D
+from nodepy.CollisionShape import CollisionShape
+from nodepy.Vector2d import Vector2d
+from nodepy.Signal import Signal
 class Bullet(Node):
     SPEED = 380
     def __init__(self, pos, direction, owner):

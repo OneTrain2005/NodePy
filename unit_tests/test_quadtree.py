@@ -1,10 +1,10 @@
-"""Unit tests for Engine.Quadtree (now a spatial hash)"""
+"""Unit tests for nodepy.Quadtree (now a spatial hash)"""
 
 import pytest
-from Engine.Quadtree import SpatialHash
-from Engine.CollisionShape import CollisionShape
-from Engine.Node import Node
-from Engine.Vector2d import Vector2d
+from nodepy.Quadtree import SpatialHash
+from nodepy.CollisionShape import CollisionShape
+from nodepy.Node import Node
+from nodepy.Vector2d import Vector2d
 
 
 class TestSpatialHashInsert:

@@ -1,9 +1,9 @@
-"""Unit tests for Engine.CollisionShape"""
+"""Unit tests for nodepy.CollisionShape"""
 
 import pytest
-from Engine.CollisionShape import CollisionShape
-from Engine.Node import Node
-from Engine.Vector2d import Vector2d
+from nodepy.CollisionShape import CollisionShape
+from nodepy.Node import Node
+from nodepy.Vector2d import Vector2d
 
 
 class TestCollisionShapeInit:

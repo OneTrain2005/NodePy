@@ -1,7 +1,7 @@
 from __future__ import annotations
-from Engine.Node import Node
-from Engine.Matrix3x3 import Matrix3x3
-from Engine.Vector2d import Vector2d
+from nodepy.Node import Node
+from nodepy.Matrix3x3 import Matrix3x3
+from nodepy.Vector2d import Vector2d
 from typing import Optional, Tuple
 
 class Camera2D(Node):

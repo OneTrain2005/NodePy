@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 from PIL import Image
-from Engine.Texture2D import ImageTexture
+from nodepy.Texture2D import ImageTexture
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 ASSETS = Path(__file__).resolve().parent / "assets"
 def load(n, s): return ImageTexture.load(ASSETS / n, native_size=s, filter_mode=Image.NEAREST)

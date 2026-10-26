@@ -1,5 +1,5 @@
 from __future__ import annotations
-from Engine.Vector2d import Vector2d
+from nodepy.Vector2d import Vector2d
 from typing import Callable, Dict, List
 import tkinter as tk
 

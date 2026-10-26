@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "NodePy"
-version = "1.1.0"
+version = "1.2.0"
 description = "A Godot-inspired 2D game engine built in Python and tkinter"
 readme = "README.md"
 license = {text = "MIT"}
@@ -12,6 +12,10 @@ requires-python = ">=3.10"
 dependencies = [
     "Pillow",
 ]
+
+[tool.setuptools]
+# "Engine" is a deprecated alias for "nodepy", kept for existing games
+packages = ["nodepy", "Engine"]
 
 [project.urls]
 Homepage = "https://github.com/OneTrain2005/NodePy"

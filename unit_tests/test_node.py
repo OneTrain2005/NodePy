@@ -1,9 +1,9 @@
-"""Unit tests for Engine.Node"""
+"""Unit tests for nodepy.Node"""
 
 import pytest
-from Engine.Node import Node
-from Engine.Vector2d import Vector2d
-from Engine.Matrix3x3 import Matrix3x3
+from nodepy.Node import Node
+from nodepy.Vector2d import Vector2d
+from nodepy.Matrix3x3 import Matrix3x3
 
 
 class TestNodeInit:

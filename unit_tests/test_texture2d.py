@@ -1,9 +1,9 @@
-"""Unit tests for Engine.Texture2D"""
+"""Unit tests for nodepy.Texture2D"""
 
 import os
 import pytest
 from PIL import Image
-from Engine.Texture2D import Texture2D, ImageTexture
+from nodepy.Texture2D import Texture2D, ImageTexture
 
 
 class TestTexture2DBase:

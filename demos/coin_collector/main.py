@@ -23,17 +23,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from PIL import Image
 
-from Engine.Camera2D import Camera2D
-from Engine.CollisionShape import CollisionShape
-from Engine.ColorRect2D import ColorRect2D
-from Engine.GameLoop import GameLoop
-from Engine.Input import Input
-from Engine.Matrix3x3 import Matrix3x3
-from Engine.Node import Node
-from Engine.Signal import Signal
-from Engine.Sprite2D import Sprite2D
-from Engine.Texture2D import ImageTexture
-from Engine.Vector2d import Vector2d
+from nodepy.Camera2D import Camera2D
+from nodepy.CollisionShape import CollisionShape
+from nodepy.ColorRect2D import ColorRect2D
+from nodepy.GameLoop import GameLoop
+from nodepy.Input import Input
+from nodepy.Matrix3x3 import Matrix3x3
+from nodepy.Node import Node
+from nodepy.Signal import Signal
+from nodepy.Sprite2D import Sprite2D
+from nodepy.Texture2D import ImageTexture
+from nodepy.Vector2d import Vector2d
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Player
@@ -234,7 +234,7 @@ def build_scene(loop: GameLoop) -> Node:
 
     # Pre-bake all 72 coin rotation frames at scene load so no PIL work
     # happens during gameplay.  zoom=1 → display size matches Coin.sprite dims.
-    from Engine.TextureManager import TextureManager
+    from nodepy.TextureManager import TextureManager
 
     TextureManager.instance().prewarm(
         _get_coin_texture(), w_px=24, h_px=24, filter_mode=Image.NEAREST

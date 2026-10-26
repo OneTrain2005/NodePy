@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Tuple
 from PIL import Image, ImageTk
 
 if TYPE_CHECKING:
-    from Engine.Texture2D import Texture2D
+    from nodepy.Texture2D import Texture2D
 
 # (texture_id, quantised_rot_step, w_px, h_px, filter_mode)
 _CacheKey    = Tuple[int, int, int, int, int]

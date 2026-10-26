@@ -1,7 +1,7 @@
-"""Unit tests for Engine.Signal"""
+"""Unit tests for nodepy.Signal"""
 
 import pytest
-from Engine.Signal import Signal
+from nodepy.Signal import Signal
 
 
 class TestSignalConnect:
