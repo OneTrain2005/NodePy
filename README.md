@@ -4,7 +4,8 @@ A Godot-inspired 2D game engine built in Python and tkinter. One external depend
 
 This README will walk you through **how to use** the engine and **how it works under the hood** — including the software design patterns that make it tick, with links to deeper reading for each one.
 
-> **Version:** 1.1  
+> **Version:** 1.2  
+> **New in 1.2:** `nodepy` package name (the old `Engine` imports still work) and a [plugin API](#plugins) for extensions that live in their own packages.  
 > **New in 1.1:** Fixed-timestep `_physics_process`, `_process` for frame logic, spatial-hash collision, retained canvas rendering, deferred calls, and exception-safe signals.
 
 ---

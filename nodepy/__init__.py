@@ -4,7 +4,7 @@ Everything exported here is the public API that games and plugins can rely
 on.  Names starting with an underscore may change between minor versions.
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 from nodepy.Vector2d import Vector2d
 from nodepy.Matrix3x3 import Matrix3x3
